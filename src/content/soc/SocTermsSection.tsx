@@ -5,12 +5,12 @@ const categories = [
     { en: 'SOC', ar: 'مركز عمليات الأمن السيبراني' },
     { en: 'Alert', ar: 'تنبيه أمني من نظام أو أداة' },
     { en: 'Event', ar: 'حدث مفرد في النظام (لا يعني خطر)' },
-    { en: 'Incident', ar: 'حادثة أمنية مؤكدة' },
-    { en: 'IOC (Indicator of Compromise)', ar: 'مؤشر اختراق - IP, hash, domain' },
-    { en: 'IOA (Indicator of Attack)', ar: 'مؤشر هجوم - سلوك يدل على هجوم' },
+    { en: 'Incident', ar: 'حدث أو مجموعة أحداث تستوفي معايير المؤسسة للاستجابة؛ ليست كل Alert حادثة' },
+    { en: 'IOC (Indicator of Compromise)', ar: 'Observable مثل IP/hash/domain يرتبط باحتمال compromise؛ قرينة زمنية لا حكم منفرد' },
+    { en: 'IOA (Indicator of Attack)', ar: 'نمط/سلوك يتسق مع نشاط هجومي؛ قد يتشابه مع إدارة مشروعة ويحتاج سياقًا' },
     { en: 'TTPs', ar: 'تكتيكات وتقنيات وإجراءات المهاجمين' },
-    { en: 'Threat Actor', ar: 'الجهة المهاجمة' },
-    { en: 'APT', ar: 'تهديد متقدم مستمر' },
+    { en: 'Threat Actor', ar: 'فرد أو مجموعة أو كيان يُنسب إليه نشاط تهديد بدرجة ثقة محددة' },
+    { en: 'APT', ar: 'حملة/جهة ذات قدرة واستمرارية وأهداف؛ لا تُنسب من أداة أو IOC واحد' },
     { en: 'Triage', ar: 'الفرز الأولي للتنبيهات' },
     { en: 'Investigation', ar: 'التحقيق في التنبيه' },
     { en: 'Escalation', ar: 'التصعيد لمستوى أعلى' },
@@ -24,9 +24,9 @@ const categories = [
     { en: 'Lessons Learned', ar: 'الدروس المستفادة' },
     { en: 'IR (Incident Response)', ar: 'الاستجابة للحوادث' },
     { en: 'CSIRT', ar: 'فريق الاستجابة لحوادث أمن الحاسب' },
-    { en: 'Dwell Time', ar: 'مدة بقاء المهاجم قبل الاكتشاف' },
+    { en: 'Dwell Time', ar: 'المدة بين بدء compromise وفق التعريف واكتشافه؛ القياس يعتمد جودة timestamp' },
     { en: 'MTTD', ar: 'متوسط وقت الاكتشاف' },
-    { en: 'MTTR', ar: 'متوسط وقت الاستجابة' },
+    { en: 'MTTR', ar: 'متوسط وقت response/resolution/recovery وفق تعريف المؤسسة؛ اذكر المقصود' },
     { en: 'SLA', ar: 'اتفاقية مستوى الخدمة' },
     { en: 'SOP', ar: 'إجراء التشغيل القياسي' },
   ]},
@@ -34,7 +34,7 @@ const categories = [
     { en: 'SIEM', ar: 'نظام إدارة معلومات وأحداث الأمن' },
     { en: 'SOAR', ar: 'نظام التنسيق والأتمتة والاستجابة' },
     { en: 'EDR', ar: 'كشف واستجابة على الأجهزة الطرفية' },
-    { en: 'XDR', ar: 'كشف موسع عبر طبقات متعددة' },
+    { en: 'XDR', ar: 'فئة منتجات تربط telemetry واستجابة عبر طبقات؛ الاسم لا يضمن sources أو coverage' },
     { en: 'MDR', ar: 'خدمة مُدارة للكشف والاستجابة' },
     { en: 'NDR', ar: 'كشف على مستوى الشبكة' },
     { en: 'IDS', ar: 'نظام كشف التسلل' },
@@ -42,16 +42,16 @@ const categories = [
     { en: 'WAF', ar: 'جدار حماية تطبيقات الويب' },
     { en: 'DLP', ar: 'منع تسريب البيانات' },
     { en: 'CASB', ar: 'وسيط أمن الوصول السحابي' },
-    { en: 'Sandbox', ar: 'بيئة معزولة لتحليل الملفات' },
+    { en: 'Sandbox', ar: 'بيئة تحليل مضبوطة؛ العزل والخصوصية والegress تختلف ويجب التحقق منها' },
   ]},
   { name: 'التصنيفات', terms: [
-    { en: 'True Positive (TP)', ar: 'تنبيه صحيح لتهديد حقيقي' },
-    { en: 'False Positive (FP)', ar: 'تنبيه خاطئ - ليس تهديد فعلي' },
-    { en: 'True Negative (TN)', ar: 'عدم تنبيه عند عدم وجود تهديد' },
-    { en: 'False Negative (FN)', ar: 'عدم تنبيه عند وجود تهديد (الأخطر)' },
-    { en: 'Benign Positive (BP)', ar: 'تنبيه صحيح لكنه نشاط مشروع' },
-    { en: 'Severity', ar: 'مستوى الخطورة' },
-    { en: 'Priority', ar: 'الأولوية في المعالجة' },
+    { en: 'True Positive (TP)', ar: 'Detection طابقت نشاطًا داخل تعريفها ويصنَّف تهديدًا وفق policy/evidence' },
+    { en: 'False Positive (FP)', ar: 'Detection أطلقت على حالة لا ينبغي أن تطابق منطقها/هدفها؛ وثّق سبب التصنيف' },
+    { en: 'True Negative (TN)', ar: 'حالة سلبية لم تُطلق detection؛ يصعب قياسها دون مجموعة اختبار معلومة' },
+    { en: 'False Negative (FN)', ar: 'نشاط داخل scope الكشف لم يُكتشف؛ قد يكون logic أو telemetry gap' },
+    { en: 'Benign Positive (BP)', ar: 'منطق الكشف طابق السلوك كما صُمم لكنه مشروع سياقيًا؛ المصطلح والسياسة يختلفان' },
+    { en: 'Severity', ar: 'تقدير شدة الأثر/التهديد وفق model؛ ليست ترتيب queue وحدها' },
+    { en: 'Priority', ar: 'ترتيب المعالجة من severity والثقة والأصل والانتشار والاستعجال وSLA' },
     { en: 'Scope', ar: 'نطاق التأثير' },
   ]},
   { name: 'الهجمات', terms: [
@@ -59,27 +59,27 @@ const categories = [
     { en: 'Privilege Escalation', ar: 'تصعيد الصلاحيات' },
     { en: 'Persistence', ar: 'البقاء في النظام' },
     { en: 'Exfiltration', ar: 'تسريب البيانات' },
-    { en: 'C2', ar: 'خادم القيادة والتحكم' },
-    { en: 'Beacon / Beaconing', ar: 'اتصال دوري بـ C2' },
-    { en: 'Payload', ar: 'الحمولة الخبيثة' },
+    { en: 'C2 (Command and Control)', ar: 'قناة/بنية قيادة وتحكم محتملة؛ HTTPS أو IP مشترك لا يثبتها منفردًا' },
+    { en: 'Beacon / Beaconing', ar: 'اتصال callback دوري/شبه دوري مرشح؛ schedulers حميدة قد تتشابه معه' },
+    { en: 'Payload', ar: 'البيانات أو الكود المحمول/المنفذ؛ ليست خبيثة بالضرورة دون سياق' },
     { en: 'RAT', ar: 'حصان طروادة للوصول عن بعد' },
     { en: 'Ransomware', ar: 'برمجية الفدية' },
     { en: 'Phishing', ar: 'التصيد الاحتيالي' },
     { en: 'Spear Phishing', ar: 'تصيد موجه لشخص معين' },
     { en: 'Password Spraying', ar: 'تجريب كلمة مرور واحدة على حسابات كثيرة' },
     { en: 'Credential Stuffing', ar: 'تجريب كلمات مرور مسربة' },
-    { en: 'Zero-Day', ar: 'ثغرة غير معروفة سابقاً' },
+    { en: 'Zero-Day', ar: 'ثغرة لا يتوفر لها دفاع/تصحيح كافٍ عند الاستغلال أو الإفصاح بحسب السياق' },
     { en: 'Rootkit', ar: 'أداة إخفاء بصلاحيات عالية' },
   ]},
   { name: 'Threat Intel', terms: [
-    { en: 'Threat Hunting', ar: 'البحث الاستباقي عن التهديدات' },
+    { en: 'Threat Hunting', ar: 'بحث استباقي قائم على فرضية وبيانات لاكتشاف نشاط لا تغطيه التنبيهات جيدًا' },
     { en: 'OSINT', ar: 'معلومات من مصادر مفتوحة' },
     { en: 'CTI', ar: 'معلومات التهديدات السيبرانية' },
-    { en: 'TLP', ar: 'بروتوكول تصنيف المعلومات' },
+    { en: 'TLP', ar: 'بروتوكول FIRST لتحديد حدود مشاركة المعلومات؛ ليس تصنيف سرية حكوميًا' },
     { en: 'CVE', ar: 'رقم تعريف الثغرة' },
-    { en: 'CVSS', ar: 'نظام تقييم الثغرات' },
-    { en: 'Baseline', ar: 'خط الأساس للسلوك الطبيعي' },
-    { en: 'Anomaly', ar: 'شذوذ عن السلوك الطبيعي' },
+    { en: 'CVSS', ar: 'مقياس severity لخصائص الثغرة؛ لا يساوي مخاطر المؤسسة أو exploit certainty' },
+    { en: 'Baseline', ar: 'توزيع مرجعي مقاس ومؤرخ لنطاق محدد؛ يتغير ولا يساوي benign تلقائيًا' },
+    { en: 'Anomaly', ar: 'انحراف عن baseline محددة؛ مرشح للتحقيق لا دليل maliciousness' },
   ]},
   { name: 'الهوية والوصول', terms: [
     { en: 'IAM', ar: 'إدارة الهوية والوصول' },
@@ -116,11 +116,12 @@ const SocTermsSection = () => {
     <div className="space-y-8">
       <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3">
         <span>📖</span>
-        المصطلحات الأساسية (للحفظ)
+        المصطلحات الأساسية: مرجع للفهم والتواصل
       </h1>
-      <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
+      <div className="h-1 w-32 rounded bg-gradient-to-l from-cyan-500 to-transparent"></div>
+      <p className="max-w-4xl text-sm leading-7 text-gray-300">افهم المصطلح داخل عقد المؤسسة والمنتج؛ بعض التصنيفات مثل BP وMTTR تختلف بين الفرق. المصطلح لا يحول observable إلى verdict، لذلك ارجع دائمًا إلى evidence والـplaybook.</p>
 
-      <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+      <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-4">
         <input
           type="text"
           placeholder="🔍 ابحث عن مصطلح..."
@@ -154,9 +155,9 @@ const SocTermsSection = () => {
           {search ? `${filteredTerms.length} نتيجة` : `${categories[activeCategory].name} - ${filteredTerms.length} مصطلح`}
         </p>
         <div className="grid gap-1">
-          {filteredTerms.map((term, index) => (
-            <div key={index} className="flex items-center gap-4 p-3 hover:bg-gray-700/50 rounded-lg transition-colors">
-              <span className="font-mono text-cyan-400 font-bold text-sm min-w-[250px]" dir="ltr">{term.en}</span>
+          {filteredTerms.map(term => (
+            <div key={term.en} className="flex flex-col items-start gap-2 rounded-lg p-3 transition-colors hover:bg-gray-700/50 sm:flex-row sm:gap-4">
+              <span className="font-mono text-sm font-bold text-cyan-400 sm:min-w-[250px]" dir="ltr">{term.en}</span>
               <span className="text-gray-300 text-sm">{term.ar}</span>
             </div>
           ))}

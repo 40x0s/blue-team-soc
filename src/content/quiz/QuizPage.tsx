@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { QuizQuestion } from '../../data/quizData';
+import { useEffect, useMemo, useState } from 'react';
+import type { QuizQuestion } from '../../data/quizData';
 
 interface QuizPageProps {
   title: string;
@@ -7,182 +7,169 @@ interface QuizPageProps {
   questions: QuizQuestion[];
 }
 
+type QuizMode = 'exam' | 'study';
+
+const seededShuffle = (question: QuizQuestion, salt: number): QuizQuestion => {
+  const indexed = question.options.map((option, originalIndex) => ({ option, originalIndex }));
+  let seed = (question.id * 2654435761 + salt) >>> 0;
+  for (let index = indexed.length - 1; index > 0; index -= 1) {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    const swapWith = seed % (index + 1);
+    [indexed[index], indexed[swapWith]] = [indexed[swapWith], indexed[index]];
+  }
+  return {
+    ...question,
+    options: indexed.map(item => item.option),
+    correct: indexed.findIndex(item => item.originalIndex === question.correct),
+  };
+};
+
 const QuizPage: React.FC<QuizPageProps> = ({ title, icon, questions }) => {
   const [answers, setAnswers] = useState<Record<number, number>>({});
-  const [showResults, setShowResults] = useState<Record<number, boolean>>({});
-  const [showTranslation, setShowTranslation] = useState<Record<number, boolean>>({});
-  const [showFinalScore, setShowFinalScore] = useState(false);
+  const [revealed, setRevealed] = useState<Record<number, boolean>>({});
+  const [translations, setTranslations] = useState<Record<number, boolean>>({});
+  const [submitted, setSubmitted] = useState(false);
+  const [mode, setMode] = useState<QuizMode>('exam');
+  const [attempt, setAttempt] = useState(1);
 
-  const handleAnswer = (qId: number, optionIndex: number) => {
-    if (showResults[qId]) return;
-    setAnswers(prev => ({ ...prev, [qId]: optionIndex }));
-    setShowResults(prev => ({ ...prev, [qId]: true }));
+  const titleSeed = [...title].reduce((sum, char) => sum + (char.codePointAt(0) ?? 0), 0) + attempt * 7919;
+  const displayQuestions = useMemo(
+    () => questions.map(question => seededShuffle(question, titleSeed)),
+    [questions, titleSeed],
+  );
+
+  const questionSetKey = JSON.stringify(questions);
+
+  useEffect(() => {
+    setAnswers({});
+    setRevealed({});
+    setTranslations({});
+    setSubmitted(false);
+    setMode('exam');
+    setAttempt(1);
+  }, [title, questionSetKey]);
+
+  const score = displayQuestions.filter(question => answers[question.id] === question.correct).length;
+  const answered = displayQuestions.filter(question => Object.prototype.hasOwnProperty.call(answers, question.id)).length;
+  const hasQuestions = displayQuestions.length > 0;
+  const allAnswered = hasQuestions && answered === displayQuestions.length;
+
+  const handleAnswer = (questionId: number, optionIndex: number) => {
+    if (submitted || (mode === 'study' && revealed[questionId])) return;
+    setAnswers(previous => ({ ...previous, [questionId]: optionIndex }));
+    if (mode === 'study') setRevealed(previous => ({ ...previous, [questionId]: true }));
   };
-
-  const toggleTranslation = (qId: number) => {
-    setShowTranslation(prev => ({ ...prev, [qId]: !prev[qId] }));
-  };
-
-  const score = questions.filter(q => answers[q.id] === q.correct).length;
-  const answered = Object.keys(answers).length;
 
   const resetQuiz = () => {
     setAnswers({});
-    setShowResults({});
-    setShowTranslation({});
-    setShowFinalScore(false);
-    window.scrollTo(0, 0);
+    setRevealed({});
+    setTranslations({});
+    setSubmitted(false);
+    setAttempt(value => value + 1);
+    window.scrollTo({ top: 0, behavior: 'auto' });
   };
 
-  const getScoreMessage = () => {
-    const pct = (score / questions.length) * 100;
-    if (pct >= 90) return { text: 'ممتاز! جاهز للعمل 🎉', color: 'text-green-400' };
-    if (pct >= 75) return { text: 'جيد جداً! مستعد للمقابلات 💪', color: 'text-cyan-400' };
-    if (pct >= 60) return { text: 'مقبول - تحتاج تطبيق عملي أكثر', color: 'text-yellow-400' };
-    return { text: 'تحتاج مراجعة المحتوى مرة ثانية 📚', color: 'text-red-400' };
-  };
+  const percentage = hasQuestions ? Math.round((score / displayQuestions.length) * 100) : 0;
+  const progressPercentage = hasQuestions ? (answered / displayQuestions.length) * 100 : 0;
+  const resultMessage = percentage >= 90
+    ? ['إتقان معرفي ممتاز لهذا الاختبار — اثبته الآن في مختبر وسيناريو.', 'text-green-300']
+    : percentage >= 80
+      ? ['جيد — راجع الأخطاء ثم أعد المحاولة دون ملاحظات.', 'text-cyan-300']
+      : percentage >= 60
+        ? ['الأساس موجود، لكن توجد فجوات تحتاج مراجعة وتطبيقًا.', 'text-yellow-300']
+        : ['ارجع للدروس المرتبطة بالأخطاء وطبّق قبل الإعادة.', 'text-red-300'];
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3">
-        <span>{icon}</span>{title}
-      </h1>
-      <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
+      <header>
+        <h1 className="flex items-center gap-3 text-3xl font-bold text-cyan-400"><span>{icon}</span>{title}</h1>
+        <p className="mt-3 text-gray-300">ترتيب الخيارات يتغير في كل محاولة حتى تقيس الفهم لا موضع الإجابة.</p>
+      </header>
 
-      {/* Progress */}
-      <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700 sticky top-16 z-10 backdrop-blur">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-gray-400 text-sm">Answered: {answered}/{questions.length}</span>
-          <span className="text-cyan-400 text-sm">Score: {score}/{answered || 1} ({answered > 0 ? Math.round((score/answered)*100) : 0}%)</span>
+      {!hasQuestions ? (
+        <section className="rounded-xl border border-yellow-500/40 bg-yellow-950/20 p-6" role="status">
+          <h2 className="text-xl font-bold text-yellow-300">لا توجد أسئلة متاحة لهذا الاختبار</h2>
+          <p className="mt-2 text-sm leading-7 text-gray-300">لم تُحمّل مجموعة أسئلة صالحة. ارجع إلى قسم آخر أو أعد فتح الصفحة؛ لا توجد نتيجة تُحسب من مجموعة فارغة.</p>
+        </section>
+      ) : <>
+      <div className="rounded-xl border border-gray-700 bg-gray-800/60 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="font-bold text-white">اختر نمط التقييم قبل أول إجابة</p>
+            <p className="text-xs text-gray-400">الاختبار يخفي الحلول حتى التسليم؛ التعلّم يعطي تفسيرًا بعد كل سؤال.</p>
+          </div>
+          <div className="flex rounded-lg bg-gray-900 p-1">
+            <button type="button" disabled={answered > 0} onClick={() => setMode('exam')} className={`rounded-md px-4 py-2 text-sm ${mode === 'exam' ? 'bg-cyan-600 text-white' : 'text-gray-400'} disabled:cursor-not-allowed`}>اختبار مغلق</button>
+            <button type="button" disabled={answered > 0} onClick={() => setMode('study')} className={`rounded-md px-4 py-2 text-sm ${mode === 'study' ? 'bg-purple-600 text-white' : 'text-gray-400'} disabled:cursor-not-allowed`}>نمط تعلّم</button>
+          </div>
         </div>
-        <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
-          <div className="h-full bg-gradient-to-l from-cyan-500 to-green-500 transition-all duration-500" style={{ width: `${(answered/questions.length)*100}%` }} />
-        </div>
-        {answered === questions.length && !showFinalScore && (
-          <button onClick={() => setShowFinalScore(true)} className="mt-3 w-full py-2 bg-cyan-600 hover:bg-cyan-700 rounded-lg text-white font-bold transition-colors">
-            📊 Show Final Score
-          </button>
-        )}
       </div>
 
-      {/* Final Score */}
-      {showFinalScore && (
-        <div className="bg-gray-800/50 rounded-xl p-8 border border-cyan-500/50 text-center">
-          <div className="text-6xl font-bold text-cyan-400 mb-4">{Math.round((score/questions.length)*100)}%</div>
-          <div className="text-2xl font-bold text-white mb-2">{score} / {questions.length}</div>
-          <div className={`text-xl font-bold mb-6 ${getScoreMessage().color}`}>{getScoreMessage().text}</div>
-          <div className="grid grid-cols-4 gap-4 mb-6 max-w-md mx-auto">
-            <div className="bg-green-900/30 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-green-400">{score}</div>
-              <div className="text-xs text-gray-400">Correct</div>
-            </div>
-            <div className="bg-red-900/30 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-red-400">{questions.length - score}</div>
-              <div className="text-xs text-gray-400">Wrong</div>
-            </div>
-            <div className="bg-gray-700/30 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-gray-300">{questions.length}</div>
-              <div className="text-xs text-gray-400">Total</div>
-            </div>
-            <div className="bg-cyan-900/30 rounded-lg p-3 text-center">
-              <div className="text-2xl font-bold text-cyan-400">{Math.round((score/questions.length)*100)}%</div>
-              <div className="text-xs text-gray-400">Score</div>
-            </div>
-          </div>
-          <button onClick={resetQuiz} className="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg text-white font-bold transition-colors">
-            🔄 Retry Quiz
-          </button>
+      <div className="sticky top-16 z-10 rounded-xl border border-gray-700 bg-gray-900/95 p-4 backdrop-blur">
+        <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+          <span className="text-gray-300">أجبت: {answered}/{displayQuestions.length}</span>
+          {mode === 'study' && <span className="text-cyan-300">الصحيح حتى الآن: {score}/{answered || 1}</span>}
+          {mode === 'exam' && !submitted && <span className="text-yellow-300">النتيجة مخفية حتى التسليم</span>}
         </div>
+        <div className="h-2 overflow-hidden rounded-full bg-gray-700" role="progressbar" aria-valuenow={answered} aria-valuemin={0} aria-valuemax={displayQuestions.length}>
+          <div className="h-full bg-gradient-to-l from-cyan-500 to-green-500 transition-all" style={{ width: `${progressPercentage}%` }} />
+        </div>
+        {mode === 'exam' && allAnswered && !submitted && <button type="button" onClick={() => setSubmitted(true)} className="mt-3 w-full rounded-lg bg-cyan-600 py-2 font-bold text-white hover:bg-cyan-700">تسليم وكشف النتيجة</button>}
+        {mode === 'study' && allAnswered && !submitted && <button type="button" onClick={() => setSubmitted(true)} className="mt-3 w-full rounded-lg bg-cyan-600 py-2 font-bold text-white hover:bg-cyan-700">عرض الملخص</button>}
+      </div>
+
+      {submitted && (
+        <section className="rounded-xl border border-cyan-500/50 bg-gray-800/60 p-8 text-center">
+          <div className="text-6xl font-bold text-cyan-300">{percentage}%</div>
+          <div className="mt-3 text-2xl font-bold text-white">{score} / {displayQuestions.length}</div>
+          <p className={`mt-3 text-lg font-bold ${resultMessage[1]}`}>{resultMessage[0]}</p>
+          <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-gray-400">هذه نتيجة معرفة فقط، وليست شهادة جاهزية للعمل. سجّل الموضوعات التي أخطأت فيها، طبّقها، ثم أعد الاختبار بترتيب خيارات جديد.</p>
+          <button type="button" onClick={resetQuiz} className="mt-6 rounded-lg bg-purple-600 px-6 py-3 font-bold text-white hover:bg-purple-700">محاولة جديدة</button>
+        </section>
       )}
 
-      {/* Questions */}
-      <div className="space-y-6">
-        {questions.map((q, idx) => {
-          const isAnswered = showResults[q.id];
-          const isCorrect = answers[q.id] === q.correct;
-
+      <section className="space-y-6">
+        {displayQuestions.map((question, questionIndex) => {
+          const isRevealed = submitted || Boolean(revealed[question.id]);
+          const isCorrect = answers[question.id] === question.correct;
           return (
-            <div key={q.id} className={`bg-gray-800/50 rounded-xl border transition-all ${
-              isAnswered ? (isCorrect ? 'border-green-500/50' : 'border-red-500/50') : 'border-gray-700'
-            }`}>
-              {/* Question Header */}
+            <article key={question.id} className={`rounded-xl border bg-gray-800/50 ${isRevealed ? (isCorrect ? 'border-green-500/50' : 'border-red-500/50') : 'border-gray-700'}`}>
               <div className="p-6 pb-4">
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3 flex-1">
-                    <span className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-cyan-400 font-bold text-sm flex-shrink-0">
-                      {idx + 1}
-                    </span>
-                    <p className="text-white font-medium leading-relaxed" dir="ltr">{q.question}</p>
+                  <div className="flex flex-1 items-start gap-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-700 text-sm font-bold text-cyan-300">{questionIndex + 1}</span>
+                    <p className="font-medium leading-relaxed text-white" dir={translations[question.id] ? 'ltr' : 'rtl'}>{translations[question.id] ? question.question : question.questionAr}</p>
                   </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); toggleTranslation(q.id); }}
-                    className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs text-gray-300 flex-shrink-0 transition-colors"
-                    title="ترجمة عربي"
-                  >
-                    {showTranslation[q.id] ? '🇬🇧' : '🇸🇦'}
-                  </button>
+                  <button type="button" onClick={() => setTranslations(previous => ({ ...previous, [question.id]: !previous[question.id] }))} className="shrink-0 rounded bg-gray-700 px-2 py-1 text-xs text-gray-300 hover:bg-gray-600" aria-label="تبديل لغة السؤال">{translations[question.id] ? 'عربي' : 'EN'}</button>
                 </div>
-
-                {/* Arabic Translation */}
-                {showTranslation[q.id] && (
-                  <div className="mt-3 mr-11 p-3 bg-cyan-900/20 rounded-lg border border-cyan-500/20">
-                    <p className="text-cyan-300 text-sm">{q.questionAr}</p>
-                  </div>
-                )}
               </div>
 
-              {/* Options */}
-              <div className="px-6 pb-4 space-y-2">
-                {q.options.map((option, optIdx) => {
-                  let optClass = 'bg-gray-700/50 hover:bg-gray-700 border-gray-600 text-gray-300 cursor-pointer';
-                  if (isAnswered) {
-                    if (optIdx === q.correct) {
-                      optClass = 'bg-green-900/30 border-green-500 text-green-400';
-                    } else if (optIdx === answers[q.id] && optIdx !== q.correct) {
-                      optClass = 'bg-red-900/30 border-red-500 text-red-400';
-                    } else {
-                      optClass = 'bg-gray-800/50 border-gray-700 text-gray-500';
-                    }
-                  }
-
+              <div className="space-y-2 px-6 pb-4">
+                {question.options.map((option, optionIndex) => {
+                  const selected = answers[question.id] === optionIndex;
+                  const correctOption = isRevealed && optionIndex === question.correct;
+                  const wrongSelection = isRevealed && selected && !correctOption;
+                  const style = correctOption ? 'border-green-500 bg-green-900/30 text-green-300' : wrongSelection ? 'border-red-500 bg-red-900/30 text-red-300' : selected ? 'border-cyan-500 bg-cyan-900/30 text-white' : 'border-gray-600 bg-gray-700/50 text-gray-300 hover:bg-gray-700';
                   return (
-                    <button
-                      key={optIdx}
-                      onClick={() => handleAnswer(q.id, optIdx)}
-                      disabled={isAnswered}
-                      className={`w-full text-left p-3 rounded-lg border transition-all flex items-center gap-3 ${optClass}`}
-                      dir="ltr"
-                    >
-                      <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                        isAnswered && optIdx === q.correct ? 'bg-green-600 text-white' :
-                        isAnswered && optIdx === answers[q.id] && optIdx !== q.correct ? 'bg-red-600 text-white' :
-                        'bg-gray-600 text-gray-300'
-                      }`}>
-                        {isAnswered && optIdx === q.correct ? '✓' :
-                         isAnswered && optIdx === answers[q.id] && optIdx !== q.correct ? '✗' :
-                         String.fromCharCode(65 + optIdx)}
-                      </span>
+                    <button key={`${optionIndex}-${option}`} type="button" onClick={() => handleAnswer(question.id, optionIndex)} disabled={isRevealed} aria-pressed={selected} className={`flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-all ${style}`} dir="ltr">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-600 text-xs font-bold text-white">{correctOption ? '✓' : wrongSelection ? '✗' : String.fromCharCode(65 + optionIndex)}</span>
                       <span className="text-sm">{option}</span>
                     </button>
                   );
                 })}
               </div>
 
-              {/* Explanation */}
-              {isAnswered && (
-                <div className={`mx-6 mb-6 p-4 rounded-lg ${isCorrect ? 'bg-green-900/20 border border-green-500/30' : 'bg-red-900/20 border border-red-500/30'}`}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={`font-bold text-sm ${isCorrect ? 'text-green-400' : 'text-red-400'}`}>
-                      {isCorrect ? '✅ Correct!' : '❌ Incorrect'}
-                    </span>
-                  </div>
-                  <p className="text-gray-300 text-sm" dir="ltr">{q.explanation}</p>
+              {isRevealed && (
+                <div className={`mx-6 mb-6 rounded-lg border p-4 ${isCorrect ? 'border-green-500/30 bg-green-900/20' : 'border-red-500/30 bg-red-900/20'}`}>
+                  <p className={`mb-2 font-bold ${isCorrect ? 'text-green-300' : 'text-red-300'}`}>{isCorrect ? 'إجابة صحيحة' : 'إجابة غير صحيحة'}</p>
+                  <p className="text-sm leading-7 text-gray-300" dir="rtl">{question.explanation}</p>
                 </div>
               )}
-            </div>
+            </article>
           );
         })}
-      </div>
+      </section>
+      </>}
     </div>
   );
 };

@@ -1,76 +1,54 @@
-
 import Alert from '../components/Alert';
+import Table from '../components/Table';
 
-const PhilosophySection: React.FC = () => {
-  return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3">
-        <span>🎯</span>
-        الشبكات للمحلل الأمني SOC – النسخة الكاملة
-      </h1>
+const PhilosophySection: React.FC = () => (
+  <div className="space-y-8">
+    <header>
+      <h1 className="flex items-center gap-3 text-3xl font-bold text-cyan-400"><span>🎯</span>الشبكات بعقلية محلل SOC</h1>
+      <p className="mt-3 max-w-4xl text-lg leading-8 text-gray-300">هدفك أن تحول packet أو flow أو proxy log إلى حقائق وحدود وأسئلة تحقيق، لا أن تحفظ منافذ ثم تصدر حكمًا.</p>
+    </header>
 
-      <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
+    <Alert type="golden" title="السؤال الصحيح">
+      ليس «هل هذا الترافيك خبيث؟» من سطر واحد، بل: ما الذي رُصد؟ من أي نقطة؟ ما الذي لا تراه؟ هل يوافق دور الأصل والـbaseline؟ وما الدليل التالي الأقل كلفة؟
+    </Alert>
 
-      <h2 className="text-2xl font-bold text-white mt-8">الفلسفة قبل ما نبدأ</h2>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">1. طبقات الدليل الشبكي</h2>
+      <Table headers={['الطبقة', 'قد تجيب', 'لا تفترض']} rows={[
+        ['Packet capture', 'العناوين، التوقيت، flags، وأحيانًا payload', 'أنه كامل؛ قد توجد drops أو offload أو نقطة التقاط أحادية'],
+        ['Flow / firewall', '5-tuple، bytes، duration، action حسب المنتج', 'محتوى التطبيق أو هوية المستخدم دائمًا'],
+        ['DNS telemetry', 'السائل والاسم والنوع والجواب بحسب نقطة الجمع', 'أن كل resolution مرّ بالمحلل المرئي؛ cache/DoH قد تغيّر الرؤية'],
+        ['Proxy / web', 'URL/method/status/user أحيانًا', 'أن X-Forwarded-For موثوق أو أن status يثبت outcome أمنيًا'],
+        ['Endpoint/identity', 'process/user/session الذي صنع الاتصال', 'أنه متاح أو متزامن أو يحتفظ بالفترة المطلوبة'],
+      ]} />
+    </section>
 
-      <Alert type="golden" title="نقطة مهمة جداً">
-        <p>أنت <strong>مو مهندس شبكات</strong>. أنت محلل أمني.</p>
-      </Alert>
-
-      <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-        <h3 className="text-lg font-bold text-white mb-4">فرقك عن مهندس الشبكات:</h3>
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="bg-gray-700/50 rounded-lg p-4 border-r-4 border-blue-500">
-            <p className="text-blue-400 font-bold mb-2">👷 مهندس الشبكات يهتم:</p>
-            <p className="text-gray-300">"كيف أخلي الشبكة تشتغل؟"</p>
-          </div>
-          <div className="bg-gray-700/50 rounded-lg p-4 border-r-4 border-red-500">
-            <p className="text-red-400 font-bold mb-2">🔍 أنت تهتم:</p>
-            <p className="text-white font-bold">"هل هذا الترافيك طبيعي ولا مشبوه؟"</p>
-          </div>
-        </div>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">2. workflow لكل تحقيق شبكة</h2>
+      <div className="grid gap-3 md:grid-cols-3">
+        {[
+          ['1 — ثبّت النطاق', 'case ID، UTC، sensor/interface، host، capture/filter وauthorization.'],
+          ['2 — أثبت الجودة', 'زمن الجهاز، packet loss، snaplen، direction، NAT/proxy، retention.'],
+          ['3 — كوّن timeline', 'DNS → connection → TLS/application → bytes/result، مع packet/event IDs.'],
+          ['4 — اربط الكيان', 'process/user/asset owner والوجهة والغرض والتغيير والـbaseline.'],
+          ['5 — اختبر بدائل', 'عمل شرعي، misconfiguration، scanner، update، أو نشاط غير مصرح.'],
+          ['6 — قرر ووثّق', 'facts، assessment/confidence، gaps، scope، وخطوة مصرح بها.'],
+        ].map(([title, text]) => <article key={title} className="rounded-xl border border-gray-700 bg-gray-800/50 p-5"><h3 className="font-bold text-cyan-300">{title}</h3><p className="mt-2 text-sm leading-7 text-gray-300">{text}</p></article>)}
       </div>
+    </section>
 
-      <Alert type="info">
-        <p className="text-lg">
-          كل ما تتعلمه في هذا القسم، اسأل نفسك:
-        </p>
-        <blockquote className="mt-3 pr-4 border-r-4 border-cyan-500 text-cyan-300 font-bold text-xl">
-          "كيف يساعدني هذا في كشف هجوم أو تحقيق في حادثة؟"
-        </blockquote>
-      </Alert>
-
-      <div className="mt-8 p-6 bg-gradient-to-l from-cyan-900/30 to-transparent rounded-xl border border-cyan-500/30">
-        <h3 className="text-xl font-bold text-cyan-400 mb-4">📋 تقييم صفحة Networking</h3>
-        
-        <div className="mb-6">
-          <h4 className="text-green-400 font-bold mb-2">✅ الجيد فيها:</h4>
-          <ul className="list-disc list-inside space-y-1 text-gray-300 text-sm">
-            <li>التركيز على "فهم القصة من الـ packet" بدل حفظ OSI – ممتاز</li>
-            <li>الترتيب: DNS → TCP → TLS → HTTP منطقي جداً</li>
-            <li>Cheat sheet لفلاتر Wireshark موجود</li>
-            <li>فيه Labs عملية</li>
-          </ul>
-        </div>
-
-        <div>
-          <h4 className="text-red-400 font-bold mb-2">❌ النواقص الحرجة (مكملة هنا):</h4>
-          <ol className="list-decimal list-inside space-y-1 text-gray-300 text-sm">
-            <li>المحتوى مختصر جداً – عناوين أكثر من شرح فعلي</li>
-            <li>ناقص: ARP, ICMP, DHCP (مهمة في SOC)</li>
-            <li>ناقص: Ports & Protocols الشائعة (SMB, RDP, LDAP, Kerberos...)</li>
-            <li>ناقص: HTTP/TLS Troubleshooting بعمق</li>
-            <li>ناقص: Retransmissions, RST, Resets</li>
-            <li>ناقص: تحليل PCAP خطوة بخطوة</li>
-            <li>ناقص: Indicators of Compromise في الشبكة</li>
-            <li>ناقص: Beaconing, C2 traffic basics</li>
-            <li>ناقص: Suspicious DNS patterns (DGA, DNS tunneling)</li>
-            <li>ناقص: مقارنة بين HTTP/HTTPS من ناحية SOC visibility</li>
-          </ol>
-        </div>
-      </div>
-    </div>
-  );
-};
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">3. ما يجب أن تستطيع فعله</h2>
+      <ul className="space-y-2 text-sm leading-7 text-gray-300">
+        <li>• تشرح ARP/DHCP/DNS/TCP/TLS/HTTP كقصة واحدة وتحدد موضع كل دليل.</li>
+        <li>• تفرق بين capture filter وdisplay filter، وبين packet snapshot وhistorical telemetry.</li>
+        <li>• تحسب distinct destinations/ports، rates، durations، bytes وperiodicity بدل وصف «كثير».</li>
+        <li>• تفسر NAT/VPN/proxy/encryption وIPv6 وHTTP/3 دون نسبة IP مباشرة إلى شخص.</li>
+        <li>• تنتج PCAP من مختبر تملكه، hash، timeline، فرضيتين، queries وتقريرًا منقحًا.</li>
+      </ul>
+      <Alert type="warning">لا تلتقط شبكة لا تملكها أو حسابات الآخرين، ولا تنشر PCAP خامًا؛ قد يحمل cookies وtokens وDNS وأسماء أجهزة ومحتوى شخصيًا.</Alert>
+    </section>
+  </div>
+);
 
 export default PhilosophySection;

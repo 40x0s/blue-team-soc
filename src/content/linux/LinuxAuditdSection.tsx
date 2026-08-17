@@ -1,171 +1,81 @@
 import Alert from '../../components/Alert';
 import CodeBlock from '../../components/CodeBlock';
+import Table from '../../components/Table';
 
-const LinuxAuditdSection = () => {
-  return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3">
-        <span>👁️</span>
-        نظام Auditd للمراقبة المتقدمة
-      </h1>
+const LinuxAuditdSection = () => (
+  <div className="space-y-8">
+    <h1 className="text-3xl font-bold text-cyan-400">👁️ Linux Audit: قواعد، أحداث، وحدود</h1>
+    <Alert type="warning" title="auditd لا يسجل «كل شيء» تلقائيًا">
+      kernel audit يسجل ما تطلبه القواعد وقد تسجل مكونات أخرى أحداثًا. Coverage يعتمد rules، architecture، backlog، rate limits، daemon state والـretention. Global execve logging قد يسبب حجمًا عاليًا ويلتقط arguments حساسة.
+    </Alert>
 
-      <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
-
-      <Alert type="info" title="ما هو auditd؟">
-        نظام تدقيق متقدم يسجل كل ما يحدث في النظام. أقوى بكثير من السجلات العادية!
-      </Alert>
-
-      {/* التثبيت */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-bold text-white">تثبيت auditd</h2>
-
-        <CodeBlock
-          title="التثبيت"
-          code={`# Debian/Ubuntu
-sudo apt install auditd
-
-# RHEL/CentOS
-sudo yum install audit
-
-# تشغيل الخدمة
-sudo systemctl enable auditd
-sudo systemctl start auditd`}
-        />
-      </section>
-
-      {/* القواعد */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">قواعد مفيدة للمحلل</h2>
-
-        <div className="space-y-4">
-          {/* مراقبة ملف */}
-          <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-            <h3 className="text-cyan-400 font-bold mb-4">1. مراقبة ملف مهم</h3>
-            <CodeBlock
-              code={`sudo auditctl -w /etc/passwd -p wa -k passwd_changes
-sudo auditctl -w /etc/shadow -p wa -k shadow_changes
-sudo auditctl -w /etc/sudoers -p wa -k sudoers_changes`}
-            />
-            <div className="mt-4 text-sm text-gray-400">
-              <p><code className="bg-gray-700 px-1 rounded">-w</code> = راقب الملف</p>
-              <p><code className="bg-gray-700 px-1 rounded">-p wa</code> = على الكتابة (w) والتعديل (a)</p>
-              <p><code className="bg-gray-700 px-1 rounded">-k</code> = مفتاح للبحث لاحقاً</p>
-            </div>
-          </div>
-
-          {/* مراقبة الأوامر */}
-          <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-            <h3 className="text-cyan-400 font-bold mb-4">2. مراقبة تنفيذ الأوامر</h3>
-            <CodeBlock
-              code={`sudo auditctl -a always,exit -F arch=b64 -S execve -k command_execution`}
-            />
-            <p className="text-gray-400 text-sm mt-4">يسجل كل أمر يتم تنفيذه!</p>
-          </div>
-
-          {/* مراقبة SSH */}
-          <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-            <h3 className="text-cyan-400 font-bold mb-4">3. مراقبة SSH</h3>
-            <CodeBlock
-              code={`sudo auditctl -w /etc/ssh/sshd_config -p wa -k sshd_config
-sudo auditctl -w /root/.ssh/authorized_keys -p wa -k ssh_keys`}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* البحث في السجلات */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">البحث في سجلات Audit</h2>
-
-        <CodeBlock
-          title="أوامر ausearch"
-          code={`# عرض القواعد الحالية
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">1. Health قبل البحث</h2>
+      <CodeBlock language="bash" code={`sudo auditctl -s
 sudo auditctl -l
+sudo systemctl status auditd --no-pager
+sudo ausearch -m DAEMON_START,DAEMON_END,CONFIG_CHANGE --start today -i
+sudo aureport --summary`} />
+      <Table headers={['Field', 'المعنى', 'تنبيه']} rows={[
+        ['enabled', 'حالة audit في kernel', '2 قد يعني immutable حتى reboot'],
+        ['lost', 'Records فقدها kernel', 'lost > 0 visibility gap'],
+        ['backlog', 'Queue الحالية', 'فسرها مع backlog_limit/rate'],
+        ['auid / loginuid', 'هوية login الأصلية غالبًا', 'قد تكون unset لخدمة أو container'],
+        ['uid/euid', 'هوية process الفعلية', 'لا تستبدل auid'],
+        ['success/exit', 'نتيجة syscall', 'نجاح syscall لا يثبت نجاح هدف أعلى مستوى'],
+      ]} />
+    </section>
 
-# البحث حسب المفتاح
-sudo ausearch -k passwd_changes
-sudo ausearch -k command_execution
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">2. قاعدة مختبر مؤقتة محدودة</h2>
+      <Alert type="danger">لا تغيّر audit rules في production كمحلل L1 دون change approval. افحص وجود rule/key متعارض، وقد تمنع immutable mode التعديل.</Alert>
+      <CodeBlock language="bash" code={`# داخل VM فقط: أنشئ fixture غير حساس.
+sudo install -m 0644 /dev/null /tmp/soc-audit-fixture
 
-# البحث حسب الوقت
-sudo ausearch -ts today
-sudo ausearch -ts recent
+# File watch بسيط للاختبار المؤقت.
+sudo auditctl -w /tmp/soc-audit-fixture -p wa -k soc_lab_file
+printf 'authorized-lab-marker\\n' | sudo tee -a /tmp/soc-audit-fixture >/dev/null
+sudo ausearch -k soc_lab_file --start recent -i
 
-# البحث حسب المستخدم
-sudo ausearch -ua root
+# Cleanup محدد؛ لا تستخدم auditctl -D.
+sudo auditctl -W /tmp/soc-audit-fixture -k soc_lab_file
+sudo rm -f /tmp/soc-audit-fixture`} />
+      <p className="text-sm leading-7 text-gray-300">للإنتاج تُدار القواعد persistent في <span dir="ltr">/etc/audit/rules.d/*.rules</span> عبر configuration management، وتُختبر للـperformance والـordering قبل <span dir="ltr">augenrules --load</span>.</p>
+    </section>
 
-# البحث حسب العملية
-sudo ausearch -p 1234`}
-        />
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">3. لا تقرأ record منفردًا</h2>
+      <p className="leading-8 text-gray-300">عملية واحدة قد تولد records من أنواع SYSCALL وPATH وCWD وPROCTITLE وEXECVE تشترك في audit event serial مثل <span dir="ltr">msg=audit(epoch:serial)</span>. اجمع الحدث كاملًا قبل الاستنتاج.</p>
+      <CodeBlock language="bash" code={`# ابحث بالـkey ثم خزّن raw قبل interpretation.
+sudo ausearch -k soc_lab_file --start today --raw > CASE-001-audit.raw
+sha256sum CASE-001-audit.raw
 
-        <CodeBlock
-          title="تقارير ملخصة"
-          code={`# تقرير عام
-sudo aureport
+# Interpretation يترجم UIDs/syscalls؛ احتفظ بالخام أيضًا.
+sudo ausearch -k soc_lab_file --start today -i
 
-# ملخص
-sudo aureport --summary
+# البحث بالـevent serial المكتشف
+sudo ausearch -a 12345 --raw`} />
+      <Table headers={['Record', 'يوفر عادة', 'حدود']} rows={[
+        ['SYSCALL', 'syscall، arch، success، uid/auid، pid/ppid', 'قد لا يعطي كل arguments'],
+        ['EXECVE', 'arguments المسجلة', 'قد تحتوي secrets/تُجزّأ/تتأثر config'],
+        ['PATH', 'paths/inodes/items', 'افهم item وnametype'],
+        ['CWD', 'working directory', 'ليس path النهائي وحده'],
+        ['PROCTITLE', 'process title encoded غالبًا', 'قد يحتاج decode ولا يثبت intent'],
+      ]} />
+    </section>
 
-# محاولات الدخول الفاشلة
-sudo aureport -au --failed
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">4. هندسة rule بدل «سجل execve كله»</h2>
+      <CodeBlock language="text" code={`Objective → asset/path/syscall → users/architectures → expected volume
+→ test events (positive + negative) → latency/loss → retention/privacy
+→ documented owner → rollback → alert logic`} />
+      <p className="leading-8 text-gray-300">على x86_64 قد تحتاج b64 وb32 لبعض syscall rules. Filters غير الصحيحة أو ترتيب never rules قد يحجب evidence. استخدم وثائق التوزيعة واختبر <span dir="ltr">auditctl -l</span> والحدث الناتج، لا مجرد نجاح load.</p>
+    </section>
 
-# الملفات المعدلة
-sudo aureport -f
-
-# الأوامر المنفذة
-sudo aureport -x`}
-        />
-      </section>
-
-      {/* قواعد دائمة */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">جعل القواعد دائمة</h2>
-
-        <Alert type="warning">
-          القواعد المضافة بـ auditctl تختفي بعد إعادة التشغيل!
-        </Alert>
-
-        <CodeBlock
-          title="إضافة قواعد دائمة"
-          code={`# أضف القواعد لهذا الملف
-sudo nano /etc/audit/rules.d/custom.rules
-
-# محتوى الملف:
--w /etc/passwd -p wa -k passwd_changes
--w /etc/shadow -p wa -k shadow_changes
--w /etc/sudoers -p wa -k sudoers_changes
--w /etc/ssh/sshd_config -p wa -k sshd_config
-
-# أعد تحميل القواعد
-sudo augenrules --load`}
-        />
-      </section>
-
-      {/* مثال عملي */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">📋 مثال عملي</h2>
-
-        <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-          <p className="text-gray-300 mb-4">لنفترض تريد معرفة من عدّل /etc/passwd:</p>
-          <CodeBlock
-            code={`# 1. أضف القاعدة
-sudo auditctl -w /etc/passwd -p wa -k passwd_watch
-
-# 2. انتظر أو افتعل تعديل للاختبار
-sudo useradd testuser
-
-# 3. ابحث
-sudo ausearch -k passwd_watch
-
-# 4. النتيجة تظهر:
-# - من عدّل الملف
-# - متى
-# - من أي terminal
-# - ما الأمر المستخدم`}
-          />
-        </div>
-      </section>
-    </div>
-  );
-};
+    <Alert type="golden" title="معيار الإتقان">
+      قدّم event واحدًا كامل records: فرّق auid عن euid، فسّر success/exit، اربطه بـjournal/process context، واذكر health وlost count والقاعدة التي جعلت الحدث مرئيًا.
+    </Alert>
+  </div>
+);
 
 export default LinuxAuditdSection;

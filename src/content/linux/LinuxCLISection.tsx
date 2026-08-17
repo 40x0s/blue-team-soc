@@ -2,234 +2,83 @@ import Alert from '../../components/Alert';
 import CodeBlock from '../../components/CodeBlock';
 import Table from '../../components/Table';
 
-const LinuxCLISection = () => {
-  return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3">
-        <span>⌨️</span>
-        أوامر CLI للمحلل
-      </h1>
+const LinuxCLISection = () => (
+  <div className="space-y-8">
+    <h1 className="text-3xl font-bold text-cyan-400">⌨️ CLI للمحلل: فرز قابل للتكرار</h1>
+    <Alert type="info" title="القاعدة العملية">
+      لا تعدّل الأصل. اقتبس المتغيرات، استخدم <span dir="ltr">--</span> قبل paths عند دعم الأمر، وثبّت locale/timezone، واحفظ command وinput hash وoutput وerrors.
+    </Alert>
 
-      <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">1. grep وRegex دون مبالغة</h2>
+      <CodeBlock language="bash" code={`grep -nF -- 'literal text' evidence.log       # fixed string
+LC_ALL=C grep -niE -- 'failed|invalid' evidence.log
+# -C يضيف سياقًا؛ احذر بيانات حساسة حول المطابقة.
+grep -nF -C 2 -- 'Accepted publickey' evidence.log`} />
+      <Table headers={['الخيار/رمز', 'المعنى', 'خطأ شائع']} rows={[
+        ['-F', 'Literal لا Regex', 'استخدام -E لنص غير موثوق'],
+        ['-E', 'Extended regex', 'اعتبار المطابقة validation'],
+        ['^ / $', 'بداية/نهاية line', '$ قد يسبق newline'],
+        ['.*', 'أي تسلسل', 'Greedy وضوضاء عالية'],
+        ['[0-9]{1,3}', '1–3 digits', 'لا يتحقق أن IPv4 octet ≤255'],
+      ]} />
+      <p className="leading-7 text-gray-300">Regex يستخرج candidate؛ استخدم <span dir="ltr">ipaddress</span> أو parser للبروتوكول للتحقق. URLs/email وIPv6 أصعب من الأنماط المختصرة.</p>
+    </section>
 
-      {/* grep */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-bold text-white">أمر grep بعمق</h2>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">2. sort / uniq / cut / awk</h2>
+      <CodeBlock language="bash" code={`# uniq يعد المتجاور فقط؛ لذلك sort قبله.
+LC_ALL=C sort -- candidates.txt | uniq -c | sort -k1,1nr
 
-        <CodeBlock
-          title="الاستخدام الأساسي"
-          code={`grep "pattern" file.log`}
-        />
+# delimiter ثابت فقط؛ CSV المقتبس يحتاج parser CSV.
+cut -d: -f1 -- /etc/passwd
 
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-            <h3 className="text-cyan-400 font-bold mb-3">الخيارات الأساسية</h3>
-            <CodeBlock
-              code={`-i   # بدون حساسية لحالة الأحرف
--v   # العكس (ما لا يطابق)
--c   # عدد المطابقات فقط
--n   # مع رقم السطر
--r   # البحث في كل المجلدات`}
-            />
-          </div>
-          <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-            <h3 className="text-cyan-400 font-bold mb-3">خيارات السياق</h3>
-            <CodeBlock
-              code={`-A 3   # 3 أسطر بعد المطابقة
--B 3   # 3 أسطر قبل المطابقة
--C 2   # 2 أسطر قبل وبعد`}
-            />
-          </div>
-        </div>
+# awk مناسب لحقول بسيطة، لا لرسالة تتغير فيها مواقع الكلمات.
+awk -F '\\t' 'NR > 1 {count[$3]++} END {for (k in count) print count[k], k}' data.tsv`} />
+      <Alert type="warning">أمثلة <span dir="ltr">awk {'{print $11}'}</span> على auth.log هشة؛ “invalid user” يغيّر موضع الحقول، وdistro/sshd version قد يغير الصيغة. Parse named patterns ثم اختبر fixtures.</Alert>
+    </section>
 
-        <CodeBlock
-          title="أمثلة عملية للمحلل"
-          code={`# بحث بدون حساسية لحالة الأحرف
-grep -i "error" file.log
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">3. Pipelines وexit status</h2>
+      <CodeBlock language="bash" code={`#!/usr/bin/env bash
+set -o errexit -o nounset -o pipefail
+export LC_ALL=C
+[ "$#" -eq 2 ] || { echo 'usage: triage.sh INPUT OUTPUT' >&2; exit 2; }
+input=$1
+output=$2
 
-# استبعاد نمط معين
-grep -v "INFO" file.log
+sha256sum -- "$input" > "$output.input.sha256"
+grep -nE -- 'Failed password|Invalid user' "$input" \\
+  | sort > "$output"
+sha256sum -- "$output" > "$output.sha256"`} />
+      <Alert type="info"><span dir="ltr">grep</span> يرجع 1 عند عدم وجود match؛ مع <span dir="ltr">errexit/pipefail</span> قد يتوقف script. قرر هل «صفر نتائج» حالة متوقعة وتعامل معها صراحةً بدل إخفاء جميع الأخطاء بـ<span dir="ltr">|| true</span>.</Alert>
+    </section>
 
-# عدد المطابقات فقط
-grep -c "Failed" auth.log
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">4. sed وfind بأمان</h2>
+      <CodeBlock language="bash" code={`# Preview إلى ملف جديد؛ لا تستخدم -i على evidence.
+sed 's/token=[^& ]*/token=[REDACTED]/g' evidence.log > evidence.redacted.log
 
-# البحث عن عدة أنماط
-grep -E "error|warning|critical" file.log
+# قيد النطاق والزمن؛ اطبع NUL لحماية المسافات/newlines.
+find /var/log -xdev -type f -newermt '2026-01-15 08:00 UTC' \\
+  ! -newermt '2026-01-15 09:00 UTC' -print0 > files.nul
 
-# استخراج الجزء المطابق فقط
-grep -oE "[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+" auth.log`}
-        />
-      </section>
+# عرض shell-escaped للمراجعة
+while IFS= read -r -d '' path; do printf '%q\\n' "$path"; done < files.nul`} />
+      <p className="text-sm leading-7 text-gray-300"><span dir="ltr">mtime</span> يتغير بمحتوى الملف وليس creation time، وقد يُعدّل أو يُحفظ من archive. اربطه بـstat، package/change وtelemetry.</p>
+    </section>
 
-      {/* Regex */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">التعابير النمطية Regex للمحلل</h2>
-
-        <Table
-          headers={['الرمز', 'المعنى', 'مثال']}
-          rows={[
-            ['.', 'أي حرف واحد', 'a.c = abc, aXc'],
-            ['*', 'صفر أو أكثر', 'ab* = a, ab, abb'],
-            ['+', 'واحد أو أكثر', 'ab+ = ab, abb'],
-            ['?', 'صفر أو واحد', 'ab? = a, ab'],
-            ['^', 'بداية السطر', '^Error'],
-            ['$', 'نهاية السطر', 'end$'],
-            ['[abc]', 'أي حرف من المجموعة', '[aeiou]'],
-            ['[0-9]', 'أي رقم', '[0-9]+'],
-            ['[a-z]', 'أي حرف صغير', '[a-zA-Z]'],
-          ]}
-        />
-
-        <CodeBlock
-          title="أنماط مفيدة للمحلل"
-          code={`# استخراج عنوان IP
-grep -oE "[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}" file.log
-
-# استخراج البريد الإلكتروني
-grep -oE "[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}" file.log
-
-# استخراج URLs
-grep -oE "https?://[^ ]+" file.log
-
-# استخراج المنافذ
-grep -oE "port [0-9]+" file.log
-
-# استخراج التواريخ (YYYY-MM-DD)
-grep -oE "[0-9]{4}-[0-9]{2}-[0-9]{2}" file.log`}
-        />
-      </section>
-
-      {/* awk */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">أمر awk للمحلل</h2>
-
-        <Alert type="info">
-          awk يعمل على الأعمدة. كل عمود يكون $1, $2, $3 وهكذا. $0 = السطر كامل.
-        </Alert>
-
-        <CodeBlock
-          title="الاستخدام الأساسي"
-          code={`# استخراج عمود معين
-awk '{print $1}' file.log
-
-# استخراج عدة أعمدة
-awk '{print $1, $5, $9}' auth.log
-
-# تغيير الفاصل (نقطتين بدل المسافة)
-awk -F: '{print $1}' /etc/passwd
-
-# استخراج بشرط
-awk '$9 == "Failed" {print $11}' auth.log
-
-# حساب مجموع
-awk '{sum += $1} END {print sum}' numbers.txt`}
-        />
-
-        <CodeBlock
-          title="استخدامات عملية"
-          code={`# عد محاولات الدخول لكل IP
-awk '/Failed password/ {print $11}' /var/log/auth.log | sort | uniq -c | sort -rn
-
-# استخراج العناوين والمستخدمين معاً
-awk '/Failed password/ {print $11, $9}' /var/log/auth.log`}
-        />
-      </section>
-
-      {/* sed */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">أمر sed للمحلل</h2>
-
-        <CodeBlock
-          title="الاستخدام الأساسي"
-          code={`# استبدال (أول تكرار)
-sed 's/old/new/' file.txt
-
-# استبدال (كل التكرارات في السطر)
-sed 's/old/new/g' file.txt
-
-# حذف أسطر تحتوي pattern
-sed '/pattern/d' file.txt
-
-# طباعة أسطر محددة (10 إلى 20)
-sed -n '10,20p' file.txt`}
-        />
-      </section>
-
-      {/* أوامر مساعدة */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">أوامر مساعدة مهمة</h2>
-
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-            <h3 className="text-cyan-400 font-bold mb-3">sort</h3>
-            <CodeBlock
-              code={`sort file.txt      # أبجدي
-sort -r file.txt   # عكسي
-sort -n file.txt   # رقمي
-sort -k 2 file.txt # حسب العمود الثاني
-sort -u file.txt   # مع إزالة المكرر`}
-            />
-          </div>
-
-          <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-            <h3 className="text-cyan-400 font-bold mb-3">uniq</h3>
-            <CodeBlock
-              code={`uniq file.txt    # إزالة المكرر
-uniq -c file.txt # مع عدد التكرارات
-uniq -d file.txt # المكرر فقط`}
-            />
-          </div>
-
-          <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-            <h3 className="text-cyan-400 font-bold mb-3">cut</h3>
-            <CodeBlock
-              code={`cut -d: -f1 /etc/passwd  # عمود 1 بفاصل :
-cut -c1-10 file.txt      # أحرف 1-10`}
-            />
-          </div>
-
-          <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-            <h3 className="text-cyan-400 font-bold mb-3">wc</h3>
-            <CodeBlock
-              code={`wc -l file.txt  # عدد الأسطر
-wc -w file.txt  # عدد الكلمات
-wc -c file.txt  # عدد الأحرف`}
-            />
-          </div>
-
-          <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-            <h3 className="text-cyan-400 font-bold mb-3">head & tail</h3>
-            <CodeBlock
-              code={`head -n 10 file.txt      # أول 10 أسطر
-tail -n 10 file.txt      # آخر 10 أسطر
-tail -f /var/log/auth.log  # متابعة مباشرة`}
-            />
-          </div>
-
-          <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-            <h3 className="text-cyan-400 font-bold mb-3">find</h3>
-            <CodeBlock
-              code={`find / -name "*.log"     # بالاسم
-find / -type f -mtime -1 # ملفات آخر 24 ساعة
-find / -perm -4000       # ملفات SUID`}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Pipes */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">الـ Pipes للجمع بين الأوامر</h2>
-
-        <Alert type="golden" title="القوة الحقيقية في الجمع!">
-          <CodeBlock
-            code={`cat auth.log | grep "Failed" | awk '{print $11}' | sort | uniq -c | sort -rn | head -10`}
-          />
-          <p className="mt-2">هذا الأمر يعطيك أعلى 10 عناوين IP في محاولات brute force!</p>
-        </Alert>
-      </section>
-    </div>
-  );
-};
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">5. Mini exercise</h2>
+      <CodeBlock language="text" code={`Inputs: fixture hash + parser version
+Window: start inclusive, end exclusive, UTC
+Transformation: exact command/script
+Outputs: total lines, parsed, unparsed, grouped results
+Validation: manually verify a sample + expected test cases
+Limitations: format/rotation/time source/visibility`} />
+      <Alert type="golden">الاحتراف ليس pipeline أطول؛ بل نتيجة تستطيع تفسيرها واختبارها وإعادة إنتاجها دون تلويث الدليل أو تسريب بياناته.</Alert>
+    </section>
+  </div>
+);
 
 export default LinuxCLISection;

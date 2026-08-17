@@ -15,8 +15,15 @@ const IOCsSection: React.FC = () => {
       <section className="space-y-4">
         <h2 className="text-2xl font-bold text-white">ما هي؟</h2>
         <Alert type="info">
-          علامات تدل على وجود نشاط خبيث في الشبكة
+          الـIOC قيمة قابلة للرصد ارتبطت بنشاط محتمل مثل IP أو domain أو URL أو hash. هو <strong>قرينة وليس حكمًا</strong>: قد يُعاد استخدام IP، يتشارك عدة عملاء في CDN، أو يصبح المؤشر قديمًا. افصل بين «وجد تطابق» و«ثبت الاختراق».
         </Alert>
+        <div className="grid md:grid-cols-3 gap-3 text-sm">
+          {[
+            ['1. Context', 'المصدر، أول/آخر رصد، نوع التهديد، confidence وTLP'],
+            ['2. Corroborate', 'process/user/asset/DNS/time/baseline ومصدر مستقل عند الحاجة'],
+            ['3. Decide', 'وثّق النتيجة ومدة صلاحية البحث؛ لا تحظر تلقائيًا بلا تقييم أثر'],
+          ].map(([title, text]) => <div key={title} className="bg-gray-800/50 border border-gray-700 rounded-xl p-4"><h3 className="text-cyan-300 font-bold">{title}</h3><p className="text-gray-300 mt-2 leading-6">{text}</p></div>)}
+        </div>
       </section>
 
       {/* Types of IOCs */}
@@ -32,7 +39,7 @@ const IOCsSection: React.FC = () => {
             </h3>
             <ul className="space-y-2 text-gray-300 text-sm">
               <li>• IPs معروفة لـ C2 servers</li>
-              <li>• IPs في feeds التهديدات (مثل AlienVault OTX)</li>
+              <li>• IPs واردة في feeds؛ سجّل المصدر والثقة والعمر بدل وصفها بالخبيثة تلقائيًا</li>
             </ul>
           </div>
 
@@ -43,9 +50,9 @@ const IOCsSection: React.FC = () => {
               2. Domain-based IOCs
             </h3>
             <ul className="space-y-2 text-gray-300 text-sm">
-              <li>• Domains معروفة كخبيثة</li>
-              <li>• Newly registered domains</li>
-              <li>• DGA domains</li>
+              <li>• Domain مرتبط بحملة مع source/confidence/time</li>
+              <li>• Newly registered قد يرفع الفرضية ولا يثبت الضرر</li>
+              <li>• DGA-like pattern يحتاج DNS/behavior corroboration</li>
             </ul>
           </div>
 
@@ -65,13 +72,13 @@ const IOCsSection: React.FC = () => {
           <div className="bg-purple-900/20 rounded-xl p-6 border border-purple-500/30">
             <h3 className="text-lg font-bold text-purple-400 mb-4 flex items-center gap-2">
               <span>📊</span>
-              4. Behavioral IOCs
+              4. سلوكيات وTTPs
             </h3>
             <ul className="space-y-2 text-gray-300 text-sm">
-              <li>• Beaconing patterns</li>
-              <li>• Data exfiltration (نقل بيانات كبير لخارج الشبكة)</li>
-              <li>• Unusual ports</li>
-              <li>• Connections في أوقات غريبة</li>
+              <li>• دورية مقاسة مع interval/jitter وليست snapshot</li>
+              <li>• حجم/وجهة نقل منحرفان عن baseline؛ ليس كل upload تسريبًا</li>
+              <li>• Protocol/process لا يطابقان المتوقع؛ port وحده لا يكفي</li>
+              <li>• وقت/وجهة غير معتادين مع identity وasset context</li>
             </ul>
           </div>
         </div>
@@ -81,23 +88,26 @@ const IOCsSection: React.FC = () => {
       <section className="space-y-4 mt-12">
         <h2 className="text-2xl font-bold text-white">مصادر Threat Intel مجانية</h2>
 
+        <Alert type="danger" title="استعلم ولا ترفع">
+          البحث عن hash/IP/domain يختلف عن رفع ملف أو URL. لا ترفع عينة، بريدًا، مستندًا، رابطًا داخليًا أو بيانات عميل إلى خدمة عامة؛ قد تصبح متاحة لشركاء الخدمة وتفشي معلومات حساسة. استخدم فقط قيمًا مسموحًا بها، أو منصة خاصة معتمدة. لا تنزّل عينات MalwareBazaar إلى جهازك اليومي أو لتجربة هذا الكورس.
+        </Alert>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[
-            { name: 'AlienVault OTX', url: 'otx.alienvault.com', desc: 'IOCs متنوعة', color: 'cyan' },
-            { name: 'AbuseIPDB', url: 'abuseipdb.com', desc: 'IPs خبيثة', color: 'red' },
-            { name: 'VirusTotal', url: 'virustotal.com', desc: 'IPs, Domains, Files', color: 'blue' },
-            { name: 'URLhaus', url: 'urlhaus.abuse.ch', desc: 'URLs خبيثة', color: 'orange' },
-            { name: 'MalwareBazaar', url: 'bazaar.abuse.ch', desc: 'Malware samples', color: 'purple' },
-            { name: 'ThreatFox', url: 'threatfox.abuse.ch', desc: 'IOCs شاملة', color: 'green' },
-          ].map((source, index) => (
+            { name: 'AlienVault OTX', url: 'otx.alienvault.com', desc: 'Community pulses وobservables متفاوتة الجودة' },
+            { name: 'AbuseIPDB', url: 'abuseipdb.com', desc: 'تقارير IP community؛ تحقق من العمر والسياق' },
+            { name: 'VirusTotal', url: 'virustotal.com', desc: 'Aggregated detections/metadata؛ الرفع العام ليس خاصًا' },
+            { name: 'URLhaus', url: 'urlhaus.abuse.ch', desc: 'URLs مرتبطة بتوزيع malware حسب المصدر' },
+            { name: 'MalwareBazaar', url: 'bazaar.abuse.ch', desc: 'Sample metadata؛ لا تنزّل للتدريب اليومي' },
+            { name: 'ThreatFox', url: 'threatfox.abuse.ch', desc: 'Shared IOCs مع metadata وثقة متفاوتة' },
+          ].map((source) => (
             <a
-              key={index}
+              key={source.name}
               href={`https://${source.url}`}
               target="_blank"
               rel="noopener noreferrer"
-              className={`bg-${source.color}-900/20 rounded-xl p-4 border border-${source.color}-500/30 hover:border-${source.color}-400 transition-all group`}
+              className="group rounded-xl border border-gray-700 bg-gray-800/50 p-4 transition-all hover:border-cyan-400"
             >
-              <h3 className={`text-lg font-bold text-${source.color}-400 mb-2 group-hover:underline`}>
+              <h3 className="mb-2 text-lg font-bold text-cyan-300 group-hover:underline">
                 {source.name}
               </h3>
               <p className="text-gray-400 text-sm mb-2">{source.desc}</p>

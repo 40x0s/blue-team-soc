@@ -1,138 +1,65 @@
+import Alert from '../../components/Alert';
+import Table from '../../components/Table';
 import CodeBlock from '../../components/CodeBlock';
 
-const WindowsADSection = () => {
-  return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3">
-        <span>🏢</span>
-        Active Directory للمحلل
-      </h1>
+const WindowsADSection = () => (
+  <div className="space-y-10">
+    <h1 className="flex items-center gap-3 text-3xl font-bold text-cyan-400"><span>🏢</span>Active Directory للمحقق: الهوية والاعتماد والحدود</h1>
+    <p className="text-lg leading-8 text-gray-300">AD DS يربط users/computers/groups/services/policy ضمن domains وforests. بالنسبة لـL1، الأساس هو فهم authoritative source ومسار authentication وprivilege graph، لا تنفيذ تغييرات إدارة.</p>
 
-      <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">خريطة المفاهيم</h2>
+      <Table headers={['مفهوم', 'ما يعنيه للتحقيق', 'خطأ شائع']} rows={[
+        ['Domain/Forest/Trust', 'حدود naming/administration وعلاقات ثقة محددة', 'اعتبار forest=company أو trust=unrestricted access.'],
+        ['DC/KDC', 'يعالج LDAP/DNS/Kerberos وخدمات أخرى حسب الدور', 'القول إن DC يرى كل process أو كل logon.'],
+        ['SID', 'معرّف أمني أقوى للربط من display name', 'الربط بالاسم فقط بعد rename أو بين domains.'],
+        ['Group scope/nesting', 'privilege قد يأتي غير مباشر', 'فحص عضوية direct فقط أو اسم المجموعة فقط.'],
+        ['GPO', 'سياسات مرتبطة sites/domains/OUs مع inheritance/filtering', 'استنتاج effective policy من GPO واحدة.'],
+        ['SPN/service account', 'يربط service instance بهوية Kerberos', 'اعتبار كل 4769/RC4 Kerberoasting.'],
+        ['Computer account', 'هوية جهاز تنتهي غالبًا بـ$', 'اعتبارها username غريبًا تلقائيًا.'],
+      ]} />
+    </section>
 
-      {/* المجموعات الحساسة */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-bold text-white">🚨 المجموعات الحساسة (راقبها دائماً)</h2>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">Kerberos baseline مبسط</h2>
+      <ol className="space-y-2 text-sm leading-7 text-gray-300">
+        <li>1. AS exchange يطلب TGT؛ KDC policy/pre-auth/time/account state تحدد النتيجة.</li>
+        <li>2. TGS exchange يطلب service ticket لـSPN؛ الطلب طبيعي جدًا.</li>
+        <li>3. العميل يقدم ticket للخدمة؛ service/endpoint logs تلزم لإثبات access/outcome.</li>
+      </ol>
+      <Alert type="info">4768/4769/4771 على KDC تصف مراحل، لا شخصًا أو compromise. اجمع requester/device/SPNs/count/encryption/status/account policy/endpoint outcome. NTLM قد يظهر في flows أخرى، والـcloud/Entra له telemetry منفصلة.</Alert>
+    </section>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[
-            { name: 'Domain Admins', desc: 'تحكم كامل في الدومين', level: 'critical' },
-            { name: 'Enterprise Admins', desc: 'تحكم في كل الـ Forest', level: 'critical' },
-            { name: 'Schema Admins', desc: 'تعديل بنية AD', level: 'critical' },
-            { name: 'Account Operators', desc: 'إدارة حسابات', level: 'high' },
-            { name: 'Backup Operators', desc: 'نسخ احتياطية (قابلة للاستغلال)', level: 'high' },
-            { name: 'Print Operators', desc: 'قد تستخدم للتصعيد', level: 'medium' },
-          ].map((group, index) => (
-            <div key={index} className={`rounded-xl p-4 border ${
-              group.level === 'critical' ? 'bg-red-900/20 border-red-500/30' :
-              group.level === 'high' ? 'bg-yellow-900/20 border-yellow-500/30' :
-              'bg-gray-800/50 border-gray-700'
-            }`}>
-              <h3 className={`font-bold mb-2 ${
-                group.level === 'critical' ? 'text-red-400' :
-                group.level === 'high' ? 'text-yellow-400' : 'text-gray-300'
-              }`}>{group.name}</h3>
-              <p className="text-gray-400 text-sm">{group.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">Read-only triage بتفويض</h2>
+      <CodeBlock language="powershell" code={`# يتطلب RSAT/ActiveDirectory وصلاحيات قراءة؛ قيد النطاق والخصائص
+Get-ADUser -Identity 'alice' -Properties Enabled,LastLogonTimestamp,PasswordLastSet,MemberOf |
+  Select-Object SamAccountName,SID,Enabled,LastLogonTimestamp,PasswordLastSet,MemberOf
 
-      {/* هجمات AD */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">⚔️ هجمات AD الشائعة</h2>
+Get-ADComputer -Identity 'WS-01' -Properties Enabled,OperatingSystem,LastLogonTimestamp |
+  Select-Object Name,SID,Enabled,OperatingSystem,LastLogonTimestamp
 
-        <div className="space-y-4">
-          {/* Kerberoasting */}
-          <div className="bg-red-900/20 rounded-xl p-6 border border-red-500/30">
-            <h3 className="text-red-400 font-bold mb-3">1. Kerberoasting</h3>
-            <p className="text-gray-300 text-sm mb-3">المهاجم يطلب tickets لخدمات ثم يكسرها offline</p>
-            <div className="bg-gray-800/50 rounded p-3">
-              <p className="text-cyan-400 text-sm font-bold mb-2">العلامات:</p>
-              <ul className="text-gray-400 text-sm space-y-1">
-                <li>• Event 4769 بكثرة من حساب واحد</li>
-                <li>• RC4 encryption (نوع 0x17)</li>
-              </ul>
-            </div>
-          </div>
+Get-ADGroupMember -Identity 'Domain Admins' -Recursive |
+  Select-Object objectClass,Name,distinguishedName`} />
+      <ul className="space-y-2 text-sm leading-7 text-gray-300">
+        <li>• LastLogonTimestamp replicated/approximate؛ ليس ساعة تحقيق دقيقة. افهم attribute semantics قبل الحكم.</li>
+        <li>• العضوية الحالية لا تثبت العضوية وقت الحادث؛ احتج change events/audit/history.</li>
+        <li>• replication latency/DC selection/time skew تفسر بعض الاختلافات.</li>
+        <li>• لا تستخدم <code>-Properties *</code> أو forest-wide enumeration بلا حاجة وتفويض؛ قلل البيانات.</li>
+      </ul>
+    </section>
 
-          {/* Golden Ticket */}
-          <div className="bg-red-900/20 rounded-xl p-6 border border-red-500/30">
-            <h3 className="text-red-400 font-bold mb-3">2. Golden Ticket</h3>
-            <p className="text-gray-300 text-sm mb-3">تزوير TGT</p>
-            <div className="bg-gray-800/50 rounded p-3">
-              <p className="text-cyan-400 text-sm font-bold mb-2">العلامات:</p>
-              <ul className="text-gray-400 text-sm space-y-1">
-                <li>• Tickets بمدة صلاحية غير طبيعية</li>
-                <li>• استخدام حسابات غير موجودة</li>
-              </ul>
-            </div>
-          </div>
-
-          {/* DCSync */}
-          <div className="bg-red-900/20 rounded-xl p-6 border border-red-500/30">
-            <h3 className="text-red-400 font-bold mb-3">3. DCSync</h3>
-            <p className="text-gray-300 text-sm mb-3">محاكاة DC لسحب password hashes</p>
-            <div className="bg-gray-800/50 rounded p-3">
-              <p className="text-cyan-400 text-sm font-bold mb-2">العلامات:</p>
-              <ul className="text-gray-400 text-sm space-y-1">
-                <li>• Event 4662 مع GUID خاصة بـ replication</li>
-                <li>• من جهاز ليس DC</li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Pass-the-Hash */}
-          <div className="bg-yellow-900/20 rounded-xl p-6 border border-yellow-500/30">
-            <h3 className="text-yellow-400 font-bold mb-3">4. Pass-the-Hash / Pass-the-Ticket</h3>
-            <p className="text-gray-300 text-sm mb-3">استخدام hash أو ticket مسروق</p>
-            <div className="bg-gray-800/50 rounded p-3">
-              <p className="text-cyan-400 text-sm font-bold mb-2">العلامات:</p>
-              <ul className="text-gray-400 text-sm space-y-1">
-                <li>• Logon Type 3 من جهاز غير معتاد</li>
-                <li>• Event 4624 بدون Event 4768 سابق</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* أوامر PowerShell لـ AD */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">💻 أوامر PowerShell لـ AD</h2>
-
-        <CodeBlock
-          title="عرض كل المستخدمين"
-          code={`Get-ADUser -Filter * -Properties *`}
-        />
-
-        <CodeBlock
-          title="أعضاء Domain Admins"
-          code={`Get-ADGroupMember -Identity "Domain Admins"`}
-        />
-
-        <CodeBlock
-          title="حسابات Don't Require Preauth (AS-REP Roasting)"
-          code={`Get-ADUser -Filter {DoesNotRequirePreAuth -eq $true}`}
-        />
-
-        <CodeBlock
-          title="حسابات لها SPN (Kerberoasting)"
-          code={`Get-ADUser -Filter {ServicePrincipalName -ne "$null"} -Properties ServicePrincipalName`}
-        />
-
-        <CodeBlock
-          title="حسابات بدون انتهاء صلاحية للكلمة"
-          code={`Get-ADUser -Filter {PasswordNeverExpires -eq $true}`}
-        />
-
-        <CodeBlock
-          title="الحسابات المقفلة"
-          code={`Search-ADAccount -LockedOut`}
-        />
-      </section>
-    </div>
-  );
-};
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">Identity triage</h2>
+      <Table headers={['سؤال', 'Evidence']} rows={[
+        ['من actor/target؟', 'SID/UPN/domain/device/service principal وalias/rename context.'],
+        ['ما التغيير؟', 'group/account/GPO/audit events + قبل/بعد + DC + change ticket.'],
+        ['هل استُخدم الامتياز؟', 'subsequent logon/ticket/process/resource access على target.'],
+        ['ما النطاق؟', 'نفس actor/source/target group/service عبر DCs/endpoints/window.'],
+        ['ما القرار؟', 'facts + alternatives + confidence + owner؛ disable/reset فقط وفق playbook.'],
+      ]} />
+    </section>
+  </div>
+);
 
 export default WindowsADSection;

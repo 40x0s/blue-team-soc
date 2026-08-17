@@ -3,467 +3,451 @@ import { Lab } from '../types';
 export const windowsLabs: Lab[] = [
   {
     id: 'windows-lab1',
-    title: 'Lab 1: تحليل Failed Logons',
-    objective: 'محاكاة وتحليل محاولات تسجيل دخول فاشلة على Windows Domain',
-    tools: ['Windows Server (DC)', 'Windows Client', 'PowerShell', 'Event Viewer'],
+    title: 'Lab 1: Failed Logons من Event 4625',
+    objective: 'توليد خمس محاولات محلية فاشلة على VM، واستخراج حقول 4625 بأسماء XML، ثم الفصل بين المحاولة الفاشلة ونجاح الدخول.',
+    tools: ['Windows lab VM', 'PowerShell 5.1+', 'runas', 'Event Viewer'],
+    estimatedMinutes: 75,
+    safety: 'نفّذ على VM تملكها بحساب مختبر. استخدم اسمًا غير موجود وخمس محاولات فقط؛ لا تختبر حسابًا حقيقيًا ولا Domain أو خدمة لا تملكها.',
+    prerequisites: ['Snapshot', 'Security log متاحة', 'Audit Logon مفعّل للنجاح/الفشل وفق سياسة المختبر'],
     steps: [
       {
         step: 1,
-        description: 'تأكد من تفعيل Audit Policy على DC',
-        command: 'auditpol /get /category:*',
-        expected: 'Logon/Logoff مفعّل'
+        description: 'تحقق من سياسة التدقيق وأنشئ مجلد القضية ووقت البداية.',
+        command: `auditpol /get /subcategory:"Logon"
+New-Item -ItemType Directory -Path C:\\SOC-Lab -Force | Out-Null
+(Get-Date).ToString('o') | Set-Content C:\\SOC-Lab\\win-lab1-start.txt`,
+        expected: 'Failure audit مفعّل وملف البداية موجود.',
+        caution: 'إذا كانت السياسة مُدارة مؤسسيًا فلا تغيّرها؛ استخدم VM أو اطلب التفويض.'
       },
       {
         step: 2,
-        description: 'من WIN-CLIENT، حاول تسجيل دخول بكلمة مرور خاطئة',
-        command: 'runas /user:DOMAIN\\admin cmd',
-        expected: 'أدخل كلمات مرور خاطئة 10 مرات'
+        description: 'من Command Prompt على الـVM شغّل runas خمس مرات، واكتب أي كلمة خاطئة عند الطلب.',
+        command: `for /L %i in (1,1,5) do @runas /user:.\\SOC-Lab-Nonexistent cmd.exe`,
+        expected: 'خمس رسائل رفض تقريبًا؛ لا shell جديدة.',
+        why: 'الاسم غير موجود يمنع تعريض حساب حقيقي للقفل، لكن شكل الحدث قد يختلف حسب إصدار Windows والسياسة.'
       },
       {
         step: 3,
-        description: 'على DC، استعلم عن Event 4625',
-        command: `Get-WinEvent -FilterHashtable @{
-  LogName='Security'
-  Id=4625
-  StartTime=(Get-Date).AddHours(-1)
-} | Select-Object TimeCreated,
-  @{Name='Account';Expression={$_.Properties[5].Value}},
-  @{Name='Workstation';Expression={$_.Properties[13].Value}},
-  @{Name='SourceIP';Expression={$_.Properties[19].Value}}`,
-        expected: '10 أحداث فاشلة'
+        description: 'استخرج الحقول بأسماء Event XML بدل Properties[n] الهشة.',
+        command: `$start = [datetime](Get-Content C:\\SOC-Lab\\win-lab1-start.txt)
+$events = Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4625; StartTime=$start} -ErrorAction Stop
+$rows = foreach ($event in $events) {
+  [xml]$xml = $event.ToXml()
+  $data = @{}
+  foreach ($item in $xml.Event.EventData.Data) { $data[[string]$item.Name] = [string]$item.'#text' }
+  [pscustomobject]@{
+    TimeCreated=$event.TimeCreated
+    TargetUser=$data.TargetUserName
+    SourceIP=$data.IpAddress
+    Workstation=$data.WorkstationName
+    LogonType=$data.LogonType
+    Status=$data.Status
+    SubStatus=$data.SubStatus
+    Process=$data.ProcessName
+    RecordId=$event.RecordId
+  }
+}
+$rows | Where-Object TargetUser -eq 'SOC-Lab-Nonexistent' | Format-Table -Auto`,
+        expected: 'صفوف للحساب الوهمي؛ SourceIP قد يكون - في محاولة محلية.',
+        why: 'ترتيب Properties قد يختلف بين event versions؛ أسماء XML توضح معنى الحقل.'
       },
       {
         step: 4,
-        description: 'حدد عدد المحاولات لكل IP',
-        command: `Get-WinEvent -FilterHashtable @{LogName='Security';Id=4625} |
-  ForEach-Object { $_.Properties[19].Value } |
-  Group-Object | Sort-Object Count -Descending`,
-        expected: 'قائمة IPs مع عدد المحاولات'
+        description: 'احسب النطاق مع الاحتفاظ بالسياق بدل عدّ كل 4625 في الجهاز.',
+        command: `$case = $rows | Where-Object TargetUser -eq 'SOC-Lab-Nonexistent'
+$case | Group-Object SourceIP,Workstation,LogonType,Status,SubStatus |
+  Sort-Object Count -Descending |
+  Select-Object Count,Name
+"Case events: $($case.Count)"`,
+        expected: 'توزيع حسب المصدر وLogonType والرموز؛ قد يختلف العدد عن 5 بسبب طريقة runas أو telemetry.',
+        caution: '4625 لا يثبت brute force وحده؛ تحتاج pattern زمنيًا ومصدرًا وهوية ونجاحًا لاحقًا وسياقًا.'
       },
       {
         step: 5,
-        description: 'تحقق من Event 4771 (Kerberos pre-auth failure)',
-        command: `Get-WinEvent -FilterHashtable @{LogName='Security';Id=4771} -MaxEvents 20`,
-        expected: 'أحداث Kerberos الفاشلة'
+        description: 'ابحث عن 4624 مرتبط بعد وقت البداية، ثم فسّر الارتباط بحذر.',
+        command: `$success = Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4624; StartTime=$start} -ErrorAction Stop
+$successRows = foreach ($event in $success) {
+  [xml]$xml = $event.ToXml(); $data=@{}
+  foreach ($item in $xml.Event.EventData.Data) { $data[[string]$item.Name]=[string]$item.'#text' }
+  [pscustomobject]@{Time=$event.TimeCreated; User=$data.TargetUserName; IP=$data.IpAddress; LogonType=$data.LogonType; RecordId=$event.RecordId}
+}
+$successRows | Where-Object User -eq 'SOC-Lab-Nonexistent'`,
+        expected: 'لا نجاح لهذا الاسم غير الموجود.',
+        why: 'نجاح قريب زمنيًا لا يرتبط تلقائيًا؛ طابق user/source/logon type والجهاز وLogon ID عند توفره.'
       }
     ],
-    filters: [
-      'Get-WinEvent -FilterHashtable @{LogName="Security";Id=4625}',
-      'Get-WinEvent -FilterHashtable @{LogName="Security";Id=4771}',
-      'Get-WinEvent -FilterHashtable @{LogName="Security";Id=4776}'
-    ],
-    deliverable: `# Lab 1: Windows Failed Logons Analysis
+    filters: ['4625: failed logon', '4624: successful logon', '4771: Kerberos pre-auth failure في Domain context', '4776: NTLM credential validation'],
+    evidence: ['وقت البداية', 'Record IDs وحقول XML', 'عدد محاولات الاسم المحدد', 'بحث النجاح المرتبط', 'تفسير Status/SubStatus من مرجع المؤسسة'],
+    cleanup: 'احذف C:\\SOC-Lab\\win-lab1-start.txt بعد حفظ التقرير، ثم ارجع إلى Snapshot إن غيّرت audit policy.',
+    deliverable: `# Windows Failed Logon Case
 
-## Case Information
-- **Case ID:** WIN-2025-001
-- **Analyst:** [اسمك]
-- **Date:** [التاريخ]
-- **Systems:** DC01, WIN-CLIENT
-
-## Summary
-تم اكتشاف محاولات تسجيل دخول فاشلة متعددة
-
-## Timeline
-| Time | Event ID | Account | Source |
-|------|----------|---------|--------|
-| | 4625 | | |
-| | 4771 | | |
-
-## Statistics
-- عدد المحاولات الفاشلة: ___
-- الحساب المستهدف: ___
-- Workstation المصدر: ___
-- Source IP: ___
-- Logon Type: ___
+## Scope
+- Host/user/time window: ___
+- Data source and audit status: ___
 
 ## Evidence
-\`\`\`
-[الصق أحداث مهمة هنا]
-\`\`\`
+| Time | Record ID | Target | Source/Workstation | Logon Type | Status/SubStatus |
+|---|---:|---|---|---:|---|
+| | | | | | |
 
-## PowerShell Commands Used
-\`\`\`powershell
-Get-WinEvent -FilterHashtable @{LogName='Security';Id=4625}
-\`\`\`
+## Reasoning
+- Facts: ___
+- Is this password guessing, user error, service misconfiguration, or insufficient evidence? ___
+- Related success search and result: ___
+- Telemetry gaps: ___
 
-## MITRE ATT&CK
-- Tactic: Credential Access
-- Technique: T1110 - Brute Force
-
-## Assessment
-- [x] True Positive
-
-## Recommendations
-1. تفعيل Account Lockout Policy
-2. مراقبة الحساب المستهدف
-3. فحص WIN-CLIENT`
+## Decision
+- Lab classification: Benign Positive
+- Production action would require: ___`
   },
   {
     id: 'windows-lab2',
-    title: 'Lab 2: تحليل Process Creation',
-    objective: 'تحليل Event 4688 وكشف أوامر مشبوهة',
-    tools: ['Windows', 'PowerShell', 'Event Viewer'],
+    title: 'Lab 2: Process Creation وEncodedCommand الحميد',
+    objective: 'توليد marker حميد عبر EncodedCommand، استخراج Event 4688 بأسماء XML، وفك payload offline دون تنفيذ مجهول.',
+    tools: ['Windows lab VM', 'PowerShell', 'Security Event Log', 'certutil محليًا'],
+    estimatedMinutes: 90,
+    safety: 'الأوامر محلية ولا تنزّل شيئًا. لا تنفذ encoded command من alert؛ استخرج النص وفكّه كبيانات داخل VM.',
+    prerequisites: ['Audit Process Creation مفعّل', 'Include command line in process creation events مفعّل في VM', 'صلاحية قراءة Security log'],
     steps: [
       {
         step: 1,
-        description: 'تأكد من تفعيل Process Creation Auditing مع Command Line',
-        command: `# تحقق من الإعداد
-reg query "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\Audit" /v ProcessCreationIncludeCmdLine_Enabled`,
-        expected: '0x1 = مفعّل'
+        description: 'تحقق من telemetry واحفظ بداية القضية.',
+        command: `auditpol /get /subcategory:"Process Creation"
+reg query "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\Audit" /v ProcessCreationIncludeCmdLine_Enabled
+New-Item -ItemType Directory C:\\SOC-Lab -Force | Out-Null
+(Get-Date).ToString('o') | Set-Content C:\\SOC-Lab\\win-lab2-start.txt`,
+        expected: 'Process Creation success audit وregistry value=1؛ وإلا وثق gap ولا تغيّر GPO مُدارة.'
       },
       {
         step: 2,
-        description: 'نفذ أمر PowerShell مشفر (للاختبار)',
-        command: `$cmd = [System.Text.Encoding]::Unicode.GetBytes("Get-Process")
-$encoded = [Convert]::ToBase64String($cmd)
-powershell -EncodedCommand $encoded`,
-        expected: 'تنفيذ الأمر'
+        description: 'أنشئ وشغّل EncodedCommand معروف المحتوى يحمل marker فقط.',
+        command: `$plain = "Write-Output 'SOC_LAB_WIN_PS_001'"
+$bytes = [Text.Encoding]::Unicode.GetBytes($plain)
+$encoded = [Convert]::ToBase64String($bytes)
+$encoded | Set-Content C:\\SOC-Lab\\known-payload.txt
+& powershell.exe -NoProfile -EncodedCommand $encoded`,
+        expected: 'يطبع SOC_LAB_WIN_PS_001 ولا يغير النظام.',
+        why: 'Windows PowerShell -EncodedCommand يتوقع غالبًا UTF-16LE (Encoding.Unicode).'
       },
       {
         step: 3,
-        description: 'نفذ أمر تنزيل (محاكاة)',
-        command: 'certutil -urlcache -split -f https://example.com/test.txt C:\\temp\\test.txt',
-        expected: 'محاولة تنزيل'
+        description: 'ولّد استخدام certutil محليًا بلا شبكة لتتعلم أن اسم LOLBin لا يصنع verdict.',
+        command: `'SOC_LAB_CERTUTIL_001' | Set-Content C:\\SOC-Lab\\marker.txt
+certutil.exe -hashfile C:\\SOC-Lab\\marker.txt SHA256`,
+        expected: 'Hash محلي؛ لا download ولا transfer.',
+        why: 'certutil أداة شرعية. التقنية تُربط بالسلوك والarguments والسياق لا باسم binary وحده.'
       },
       {
         step: 4,
-        description: 'استعلم عن Event 4688 لـ PowerShell',
-        command: `Get-WinEvent -FilterHashtable @{LogName='Security';Id=4688} -MaxEvents 100 |
-  Where-Object {$_.Properties[5].Value -match 'powershell'} |
-  Select-Object TimeCreated,
-    @{Name='Process';Expression={$_.Properties[5].Value}},
-    @{Name='CommandLine';Expression={$_.Properties[8].Value}},
-    @{Name='ParentProcess';Expression={$_.Properties[13].Value}}`,
-        expected: 'أوامر PowerShell مع command line'
+        description: 'استخرج 4688 بأسماء الحقول وابحث عن markers/arguments.',
+        command: `$start=[datetime](Get-Content C:\\SOC-Lab\\win-lab2-start.txt)
+$rows = foreach ($event in Get-WinEvent -FilterHashtable @{LogName='Security';Id=4688;StartTime=$start}) {
+  [xml]$xml=$event.ToXml(); $data=@{}
+  foreach($item in $xml.Event.EventData.Data){$data[[string]$item.Name]=[string]$item.'#text'}
+  [pscustomobject]@{
+    Time=$event.TimeCreated; RecordId=$event.RecordId
+    Image=$data.NewProcessName; CommandLine=$data.CommandLine
+    Parent=$data.ParentProcessName; User=$data.SubjectUserName
+    NewPID=$data.NewProcessId; ParentPID=$data.ProcessId
+  }
+}
+$case=$rows | Where-Object { $_.CommandLine -match 'EncodedCommand|SOC_LAB|certutil' }
+$case | Format-List`,
+        expected: 'powershell.exe مع EncodedCommand وcertutil.exe مع -hashfile، إذا command-line auditing يعمل.'
       },
       {
         step: 5,
-        description: 'ابحث عن certutil',
-        command: `Get-WinEvent -FilterHashtable @{LogName='Security';Id=4688} |
-  Where-Object {$_.Properties[5].Value -match 'certutil'} |
-  Select-Object TimeCreated, @{Name='CommandLine';Expression={$_.Properties[8].Value}}`,
-        expected: 'أوامر certutil'
+        description: 'استخرج Base64 من command line وفكه offline كنص ثم قارنه بالنسخة المعروفة.',
+        command: `$psRow=$case | Where-Object CommandLine -match '(?i)-EncodedCommand' | Select-Object -First 1
+if ($psRow.CommandLine -match '(?i)-EncodedCommand\\s+([A-Za-z0-9+/=]+)') {
+  $decoded=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String($Matches[1]))
+  "Decoded: $decoded"
+  "Matches known payload: $($Matches[1] -eq (Get-Content C:\\SOC-Lab\\known-payload.txt -Raw).Trim())"
+} else { 'Payload not captured: telemetry gap or parsing issue' }`,
+        expected: `Decoded: Write-Output 'SOC_LAB_WIN_PS_001' وMatches known payload: True.`,
+        caution: 'لا تستخدم Invoke-Expression ولا & على النص المفكوك من حدث حقيقي.'
       }
     ],
-    filters: [
-      'Event ID 4688 + PowerShell',
-      'Event ID 4688 + certutil',
-      'Event ID 4688 + EncodedCommand'
-    ],
-    deliverable: `# Lab 2: Process Creation Analysis
+    filters: ['4688 + EncodedCommand', '4688 + certutil arguments', 'NewProcessName + ParentProcessName + CommandLine', 'RecordId لتثبيت evidence'],
+    evidence: ['Audit settings', '4688 XML fields', 'Base64 الأصلي والمفكوك', 'Hash marker', 'Parent/child وRecord IDs'],
+    cleanup: `Remove-Item C:\\SOC-Lab\\win-lab2-start.txt,C:\\SOC-Lab\\known-payload.txt,C:\\SOC-Lab\\marker.txt -Force -ErrorAction SilentlyContinue`,
+    deliverable: `# Process Creation Investigation
 
-## Objective
-تحليل Event 4688 وكشف LOLBins
+## Telemetry
+- 4688 enabled: ___
+- Command line captured: ___
+- Gaps: ___
 
-## Suspicious Processes Found
-| Time | Process | Command Line | Parent |
-|------|---------|--------------|--------|
-| | powershell.exe | -EncodedCommand ... | |
-| | certutil.exe | -urlcache ... | |
+## Process evidence
+| Time | Record ID | Parent | Image | Relevant arguments | User |
+|---|---:|---|---|---|---|
+| | | | | | |
 
-## Analysis
-- EncodedCommand detected: Yes/No
-- LOLBin usage: certutil for download
+## Decode
+- Encoding assumption and evidence: ___
+- Decoded text: ___
+- Executed during analysis? No
 
-## Decoded Command
-\`\`\`
-[فك تشفير Base64 هنا]
-\`\`\`
-
-## MITRE ATT&CK
-- T1059.001 - PowerShell
-- T1105 - Ingress Tool Transfer (certutil)
-
-## Recommendations
-1. مراقبة EncodedCommand
-2. مراقبة certutil -urlcache`
+## Behavioral assessment
+- PowerShell behavior: ___
+- certutil behavior: local hashing, not transfer
+- Confidence / alternative explanations: ___`
   },
   {
     id: 'windows-lab3',
-    title: 'Lab 3: Sysmon Investigation',
-    objective: 'استخدام Sysmon لتحليل عميق للعمليات والشبكة',
-    tools: ['Sysmon', 'PowerShell', 'SwiftOnSecurity Config'],
+    title: 'Lab 3: Sysmon Process Tree بلا شبكة',
+    objective: 'التحقق من Sysmon، توليد parent/child حميد، واستخراج Event 1 بأسماء الحقول مع فهم أثر configuration.',
+    tools: ['Windows lab VM', 'Sysmon من Microsoft Sysinternals', 'PowerShell', 'Event Viewer'],
+    estimatedMinutes: 90,
+    safety: 'استخدم نسخة Sysmon الموقعة من Microsoft داخل VM. لا تستبدل configuration مؤسسة ولا تثبّت community config بلا مراجعة.',
+    prerequisites: ['Snapshot', 'Sysmon مثبت مسبقًا أو package رسمي متحقق من توقيعه', 'صلاحية Administrator للتثبيت فقط'],
     steps: [
       {
         step: 1,
-        description: 'تحقق من تثبيت Sysmon',
-        command: 'sysmon -c',
-        expected: 'عرض الإعدادات الحالية'
+        description: 'تحقق من الخدمة والتوقيع والإعداد الحالي قبل التعديل.',
+        command: `Get-Service Sysmon* -ErrorAction SilentlyContinue
+Get-AuthenticodeSignature .\\Sysmon64.exe -ErrorAction SilentlyContinue | Format-List Status,SignerCertificate
+.\\Sysmon64.exe -c`,
+        expected: 'Service تعمل وbinary موقّع، أو تعرف أن Sysmon غير مثبت.',
+        caution: 'إذا لم يكن مثبتًا، حمّل Sysmon من Microsoft Sysinternals فقط. التثبيت الافتراضي: Sysmon64.exe -accepteula -i؛ لا تنفذه على جهاز عمل.'
       },
       {
         step: 2,
-        description: 'إذا لم يكن مثبتاً، ثبته',
-        command: `# تحميل Sysmon من Microsoft
-# تحميل sysmonconfig من SwiftOnSecurity
-sysmon -i sysmonconfig-export.xml -accepteula`,
-        expected: 'Sysmon installed'
+        description: 'تحقق أن Event 1 موجود؛ عدم وجوده يعني config/ingestion gap.',
+        command: `Get-WinEvent -ListLog 'Microsoft-Windows-Sysmon/Operational'
+Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Sysmon/Operational';Id=1} -MaxEvents 3 -ErrorAction SilentlyContinue`,
+        expected: 'Channel موجود وEvent 1 مرئي؛ وإلا أصلح المختبر أو وثق gap.'
       },
       {
         step: 3,
-        description: 'نفذ عملية تتصل بالشبكة',
-        command: 'powershell -c "Invoke-WebRequest https://example.com -UseBasicParsing"',
-        expected: 'اتصال شبكي'
+        description: 'احفظ البداية وولّد سلسلة PowerShell → cmd → echo حميدة.',
+        command: `New-Item -ItemType Directory C:\\SOC-Lab -Force | Out-Null
+(Get-Date).ToString('o') | Set-Content C:\\SOC-Lab\\win-lab3-start.txt
+& powershell.exe -NoProfile -Command "cmd.exe /c echo SYSMON_LAB_PROCESS_001>C:\\SOC-Lab\\sysmon-marker.txt"
+Get-Content C:\\SOC-Lab\\sysmon-marker.txt`,
+        expected: 'ملف marker محلي؛ لا network action.'
       },
       {
         step: 4,
-        description: 'استعلم عن Sysmon Event 1 (Process Create)',
-        command: `Get-WinEvent -FilterHashtable @{
-  LogName='Microsoft-Windows-Sysmon/Operational'
-  Id=1
-  StartTime=(Get-Date).AddMinutes(-30)
-} -MaxEvents 50 | Select-Object TimeCreated, Message`,
-        expected: 'قائمة العمليات'
+        description: 'استخرج Event 1 بأسماء Image/ParentImage/CommandLine/ProcessGuid.',
+        command: `$start=[datetime](Get-Content C:\\SOC-Lab\\win-lab3-start.txt)
+$rows=foreach($event in Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Sysmon/Operational';Id=1;StartTime=$start}){
+  [xml]$xml=$event.ToXml();$data=@{}
+  foreach($item in $xml.Event.EventData.Data){$data[[string]$item.Name]=[string]$item.'#text'}
+  [pscustomobject]@{Time=$event.TimeCreated;RecordId=$event.RecordId;ProcessGuid=$data.ProcessGuid;PID=$data.ProcessId;Image=$data.Image;CommandLine=$data.CommandLine;ParentGuid=$data.ParentProcessGuid;ParentPID=$data.ParentProcessId;ParentImage=$data.ParentImage;User=$data.User;Hashes=$data.Hashes}
+}
+$case=$rows | Where-Object CommandLine -match 'SYSMON_LAB_PROCESS_001|sysmon-marker'
+$case | Format-List`,
+        expected: 'حدث cmd/echo غالبًا ومعه parent PowerShell حسب filtering؛ القيم الفعلية هي الدليل.'
       },
       {
         step: 5,
-        description: 'استعلم عن Sysmon Event 3 (Network)',
-        command: `Get-WinEvent -FilterHashtable @{
-  LogName='Microsoft-Windows-Sysmon/Operational'
-  Id=3
-  StartTime=(Get-Date).AddMinutes(-30)
-} | Select-Object TimeCreated, Message`,
-        expected: 'اتصالات شبكية'
-      },
-      {
-        step: 6,
-        description: 'استعلم عن DNS queries (Event 22)',
-        command: `Get-WinEvent -FilterHashtable @{
-  LogName='Microsoft-Windows-Sysmon/Operational'
-  Id=22
-} -MaxEvents 50`,
-        expected: 'استعلامات DNS'
-      },
-      {
-        step: 7,
-        description: 'ابحث عن عمليات من Office (Macro indicator)',
-        command: `Get-WinEvent -FilterHashtable @{
-  LogName='Microsoft-Windows-Sysmon/Operational'
-  Id=1
-} | Where-Object {$_.Message -match 'ParentImage:.*\\\\(WINWORD|EXCEL)\\.EXE'}`,
-        expected: 'عمليات من Office (إن وجدت)'
+        description: 'قيّم اكتمال process tree وفسّر الغياب كفجوة لا كبراءة.',
+        command: `$case | Select-Object Time,ProcessGuid,Image,ParentGuid,ParentImage,CommandLine | Sort-Object Time | Format-Table -Wrap
+"Rows found: $($case.Count)"
+.\\Sysmon64.exe -c | Select-String -Pattern 'ProcessCreate|HashAlgorithms'`,
+        expected: 'Timeline وGUIDs وربط parent/child أو gap موثق.',
+        why: 'ProcessGuid أقوى من PID وحده لأن PID يعاد استخدامه؛ Sysmon output يعتمد على config ونسخته.'
       }
     ],
-    filters: [
-      'Sysmon Event 1 - Process Create',
-      'Sysmon Event 3 - Network Connection',
-      'Sysmon Event 22 - DNS Query',
-      'Sysmon Event 10 - Process Access'
-    ],
-    deliverable: `# Lab 3: Sysmon Deep Investigation
+    filters: ['Sysmon 1: Process Create', 'ProcessGuid ↔ ParentProcessGuid', 'CommandLine marker', 'Sysmon 3/22 لا يظهران إلا إذا سمحت config'],
+    evidence: ['Service/config output', 'توقيع binary إن كان محليًا', 'Event 1 Record IDs', 'ProcessGuid tree', 'marker file'],
+    cleanup: 'احذف C:\\SOC-Lab\\win-lab3-start.txt وsysmon-marker.txt. لا تزل Sysmon إذا كان جزءًا من baseline؛ ارجع إلى Snapshot إن ثبته لهذا المختبر.',
+    deliverable: `# Sysmon Process Tree Case
 
-## Sysmon Configuration
-- Config: SwiftOnSecurity / Olaf Hartong
-- Version: ___
+## Sensor state
+- Sysmon version/config observed: ___
+- Event 1 coverage: ___
+- Hash algorithm/fields available: ___
 
-## Process Tree
-\`\`\`
-explorer.exe
-  └── powershell.exe
-        └── [child processes]
-\`\`\`
+## Timeline
+| Time | Record ID | Process GUID | Image | Parent GUID/Image | Command |
+|---|---:|---|---|---|---|
+| | | | | | |
 
-## Network Connections (Event 3)
-| Time | Process | Dest IP | Dest Port |
-|------|---------|---------|-----------|
-| | | | |
-
-## DNS Queries (Event 22)
-| Time | Process | Query |
-|------|---------|-------|
-| | | |
-
-## Suspicious Findings
-- [ ] Process from /tmp equivalent
-- [ ] Network connection to unusual IP
-- [ ] DNS to suspicious domain
-
-## MITRE ATT&CK
-- Technique: ___`
+## Analysis
+- Proven parent/child chain: ___
+- Missing events/fields: ___
+- Why process name alone is insufficient: ___
+- Confidence and falsification test: ___`
   },
   {
     id: 'windows-lab4',
-    title: 'Lab 4: PowerShell Attack Investigation',
-    objective: 'تحليل هجمات PowerShell من Script Block Logging',
-    tools: ['PowerShell', 'Event Viewer'],
+    title: 'Lab 4: Script Block Logging وBase64 كبيانات',
+    objective: 'توليد Script Block حميد يستخدم Base64، العثور عليه في 4104، وفصل تسجيل النص عن إثبات نتيجة التنفيذ.',
+    tools: ['Windows lab VM', 'PowerShell', 'Microsoft-Windows-PowerShell/Operational'],
+    estimatedMinutes: 75,
+    safety: 'المحتوى marker محلي فقط. لا تفك ثم تنفذ script مجهول، ولا تغيّر GPO مؤسسية.',
+    prerequisites: ['Script Block Logging مفعّل في VM', 'صلاحية قراءة PowerShell Operational log', 'Snapshot'],
     steps: [
       {
         step: 1,
-        description: 'تأكد من تفعيل Script Block Logging',
-        command: `# تحقق من Group Policy أو Registry
-reg query "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\ScriptBlockLogging"`,
-        expected: 'EnableScriptBlockLogging = 1'
+        description: 'تحقق من policy والقناة ثم احفظ وقت البداية.',
+        command: `reg query "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\PowerShell\\ScriptBlockLogging"
+Get-WinEvent -ListLog 'Microsoft-Windows-PowerShell/Operational'
+New-Item -ItemType Directory C:\\SOC-Lab -Force | Out-Null
+(Get-Date).ToString('o') | Set-Content C:\\SOC-Lab\\win-lab4-start.txt`,
+        expected: 'EnableScriptBlockLogging=1 وقناة enabled؛ وإلا وثق visibility gap.'
       },
       {
         step: 2,
-        description: 'نفذ سكربت اختباري (IEX simulation)',
-        command: `# هذا للاختبار فقط - لن يعمل فعلياً
-$test = "This is a test of IEX detection"
-# Invoke-Expression $test`,
-        expected: 'تسجيل السكربت'
+        description: 'نفذ block حميدًا يفك marker UTF-8 ويحفظ النتيجة محليًا.',
+        command: `$known='SOC_LAB_SCRIPTBLOCK_001'
+$encoded=[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($known))
+$decoded=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($encoded))
+$decoded | Set-Content C:\\SOC-Lab\\scriptblock-marker.txt
+"Encoded=$encoded; Decoded=$decoded"`,
+        expected: 'Decoded يساوي SOC_LAB_SCRIPTBLOCK_001.',
+        why: 'هذا يولد نص FromBase64String في 4104 دون download أو Invoke-Expression.'
       },
       {
         step: 3,
-        description: 'نفذ أمر Base64 encoded',
-        command: `$cmd = [System.Text.Encoding]::Unicode.GetBytes("Write-Host 'Test'")
-$encoded = [Convert]::ToBase64String($cmd)
-Write-Host "Encoded: $encoded"`,
-        expected: 'توليد Base64'
+        description: 'استخرج ScriptBlockText من XML ضمن نافذة القضية.',
+        command: `$start=[datetime](Get-Content C:\\SOC-Lab\\win-lab4-start.txt)
+$rows=foreach($event in Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-PowerShell/Operational';Id=4104;StartTime=$start}){
+  [xml]$xml=$event.ToXml();$data=@{}
+  foreach($item in $xml.Event.EventData.Data){$data[[string]$item.Name]=[string]$item.'#text'}
+  [pscustomobject]@{Time=$event.TimeCreated;RecordId=$event.RecordId;ScriptBlockId=$data.ScriptBlockId;MessageNumber=$data.MessageNumber;MessageTotal=$data.MessageTotal;Path=$data.Path;Text=$data.ScriptBlockText}
+}
+$case=$rows | Where-Object Text -match 'SOC_LAB_SCRIPTBLOCK_001|FromBase64String|scriptblock-marker'
+$case | Format-List`,
+        expected: '4104 يحمل النص أو أجزاء منه؛ MessageNumber/Total قد لا تتوفر في كل event version.'
       },
       {
         step: 4,
-        description: 'استعلم عن Event 4104',
-        command: `Get-WinEvent -FilterHashtable @{
-  LogName='Microsoft-Windows-PowerShell/Operational'
-  Id=4104
-  StartTime=(Get-Date).AddHours(-1)
-} -MaxEvents 50 | Select-Object TimeCreated, Message`,
-        expected: 'Script Blocks'
+        description: 'استخرج Base64 من النص وفكه offline فقط إن طابق شكلًا وحجمًا معقولين.',
+        command: `$text=($case.Text -join [Environment]::NewLine)
+$candidate=[regex]::Match($text,"[A-Za-z0-9+/]{16,}={0,2}").Value
+if($candidate.Length -gt 0 -and $candidate.Length -lt 4096){
+  try {[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($candidate))} catch {'Decode failed; preserve original'}
+} else {'No bounded candidate found'}`,
+        expected: 'قد يظهر marker؛ إذا التقط regex نصًا آخر فوثق false positive وعدّل extraction.',
+        caution: 'Base64 ترميز لا تشفير، ووجود FromBase64String لا يثبت maliciousness.'
       },
       {
         step: 5,
-        description: 'ابحث عن patterns مشبوهة',
-        command: `Get-WinEvent -FilterHashtable @{
-  LogName='Microsoft-Windows-PowerShell/Operational'
-  Id=4104
-} | Where-Object {
-  $_.Message -match 'DownloadString|FromBase64String|IEX|Invoke-Expression|EncodedCommand'
-} | Select-Object TimeCreated, Message`,
-        expected: 'أوامر مشبوهة'
+        description: 'فرّق بين content telemetry وexecution outcome.',
+        command: `Get-Item C:\\SOC-Lab\\scriptblock-marker.txt | Select-Object FullName,Length,CreationTimeUtc,LastWriteTimeUtc
+Get-FileHash C:\\SOC-Lab\\scriptblock-marker.txt -Algorithm SHA256`,
+        expected: 'الملف/hash دليل outcome في المختبر؛ 4104 وحده يسجل script content ولا يثبت كل نتيجة.'
       }
     ],
-    filters: [
-      'Event 4104 - Script Block',
-      'DownloadString pattern',
-      'FromBase64String pattern',
-      'IEX pattern'
-    ],
-    deliverable: `# Lab 4: PowerShell Attack Investigation
+    filters: ['4104 + ScriptBlockId', 'FromBase64String behavior', 'MessageNumber/MessageTotal للـmulti-part', '4103 module logging كمصدر إضافي إن كان مفعّلًا'],
+    evidence: ['Policy/channel status', '4104 Record ID وScriptBlockId', 'النص الأصلي وdecoded output', 'marker hash', 'telemetry gaps'],
+    cleanup: `Remove-Item C:\\SOC-Lab\\win-lab4-start.txt,C:\\SOC-Lab\\scriptblock-marker.txt -Force -ErrorAction SilentlyContinue`,
+    deliverable: `# PowerShell Script Block Case
 
-## Script Block Logging Status
-- Enabled: Yes/No
-- GPO Path: ___
+## Telemetry state
+- 4104 enabled and present: ___
+- Multi-part handling: ___
 
-## Suspicious Scripts Found
-### Script 1
-\`\`\`powershell
-[محتوى السكربت]
-\`\`\`
-**Analysis:** [تحليلك]
+## Evidence
+- Record ID / ScriptBlock ID: ___
+- Relevant text: ___
+- Candidate encoding and decoded value: ___
+- Was decoded content executed by analyst? No
+- Outcome evidence: ___
 
-### Script 2
-\`\`\`powershell
-[محتوى السكربت]
-\`\`\`
-
-## Indicators Found
-- [ ] EncodedCommand
-- [ ] DownloadString
-- [ ] IEX / Invoke-Expression
-- [ ] FromBase64String
-- [ ] Hidden Window
-- [ ] Bypass ExecutionPolicy
-
-## Decoded Commands
-\`\`\`
-[الأوامر بعد فك التشفير]
-\`\`\`
-
-## MITRE ATT&CK
-- T1059.001 - PowerShell
-- T1140 - Deobfuscate/Decode`
+## Assessment
+- Behavior observed: ___
+- Benign/malicious/insufficient and why: ___
+- Alternative explanation: ___
+- Visibility gaps: ___`
   },
   {
     id: 'windows-lab5',
-    title: 'Lab 5: Persistence Detection',
-    objective: 'كشف Persistence عبر Scheduled Tasks و Services',
-    tools: ['Windows', 'PowerShell', 'schtasks', 'sc'],
+    title: 'Lab 5: Scheduled Task حميدة قابلة للاستعادة',
+    objective: 'إنشاء task واضحة الاسم بموعد 2099، تحليل Task Scheduler و4698 إن توفر، ثم حذف العنصر المحدد والتحقق.',
+    tools: ['Windows lab VM', 'PowerShell ScheduledTasks', 'Task Scheduler Operational log', 'Security log'],
+    estimatedMinutes: 90,
+    safety: 'VM فقط وبعد Snapshot. المهمة لا تعمل أثناء المختبر لأن trigger في 2099 واسمها SOC-LAB واضح؛ لا تستخدم اسم WindowsUpdate أو hidden window لتقليد مكون نظام.',
+    prerequisites: ['صلاحية إنشاء task على VM', 'Task Scheduler Operational channel', 'Audit Other Object Access Events اختياري لـ4698'],
     steps: [
       {
         step: 1,
-        description: 'أنشئ Scheduled Task مشبوه (للاختبار)',
-        command: `schtasks /create /tn "WindowsUpdate" /tr "powershell.exe -nop -w hidden -c 'Get-Date'" /sc minute /mo 5`,
-        expected: 'Task created'
+        description: 'احفظ البداية وتأكد أن اسم المختبر غير موجود.',
+        command: `New-Item -ItemType Directory C:\\SOC-Lab -Force | Out-Null
+(Get-Date).ToString('o') | Set-Content C:\\SOC-Lab\\win-lab5-start.txt
+Get-ScheduledTask -TaskName 'SOC-LAB-PERSISTENCE-001' -ErrorAction SilentlyContinue`,
+        expected: 'لا task بهذا الاسم؛ إذا وجدت فتوقف وحدد مالكها قبل التعديل.'
       },
       {
         step: 2,
-        description: 'استعلم عن Event 4698 (Task Created)',
-        command: `Get-WinEvent -FilterHashtable @{LogName='Security';Id=4698} -MaxEvents 10 |
-  Select-Object TimeCreated, Message`,
-        expected: 'حدث إنشاء المهمة'
+        description: 'أنشئ task حميدة لا تعمل قبل 2099 وتكتب marker محليًا فقط.',
+        command: `$action=New-ScheduledTaskAction -Execute 'cmd.exe' -Argument '/c echo SOC_LAB_TASK_001>C:\\SOC-Lab\\scheduled-task-marker.txt'
+$trigger=New-ScheduledTaskTrigger -Once -At ([datetime]'2099-01-01T00:00:00')
+Register-ScheduledTask -TaskName 'SOC-LAB-PERSISTENCE-001' -Action $action -Trigger $trigger -Description 'Benign SOC course lab; delete after evidence capture' | Out-Null
+Get-ScheduledTask -TaskName 'SOC-LAB-PERSISTENCE-001' | Format-List TaskName,TaskPath,State,Author,Description`,
+        expected: 'Task Ready ووصفها واضح، ولا marker file لأنها لم تعمل.',
+        caution: 'لا تشغّل المهمة؛ الهدف تحليل registration telemetry لا التنفيذ.'
       },
       {
         step: 3,
-        description: 'استعلم عن TaskScheduler Event 106',
-        command: `Get-WinEvent -FilterHashtable @{
-  LogName='Microsoft-Windows-TaskScheduler/Operational'
-  Id=106
-} -MaxEvents 10`,
-        expected: 'تسجيل المهمة'
+        description: 'صدّر XML وحلل action/trigger/principal كبيانات.',
+        command: `Export-ScheduledTask -TaskName 'SOC-LAB-PERSISTENCE-001' | Set-Content C:\\SOC-Lab\\task.xml
+[xml]$task=Get-Content C:\\SOC-Lab\\task.xml
+[pscustomobject]@{
+  Command=$task.Task.Actions.Exec.Command
+  Arguments=$task.Task.Actions.Exec.Arguments
+  StartBoundary=$task.Task.Triggers.TimeTrigger.StartBoundary
+  UserId=$task.Task.Principals.Principal.UserId
+  RunLevel=$task.Task.Principals.Principal.RunLevel
+} | Format-List`,
+        expected: 'cmd.exe وmarker path و2099 وprincipal/run level.'
       },
       {
         step: 4,
-        description: 'فحص المهام المجدولة الحالية',
-        command: `Get-ScheduledTask | Where-Object {$_.State -eq 'Ready'} |
-  Select-Object TaskName, TaskPath, @{Name='Action';Expression={$_.Actions.Execute}}`,
-        expected: 'قائمة المهام'
+        description: 'ابحث في TaskScheduler 106 وSecurity 4698، وتعامل مع غياب الثاني كفجوة إعداد.',
+        command: `$start=[datetime](Get-Content C:\\SOC-Lab\\win-lab5-start.txt)
+Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-TaskScheduler/Operational';Id=106;StartTime=$start} -ErrorAction SilentlyContinue |
+  Where-Object Message -match 'SOC-LAB-PERSISTENCE-001' | Select-Object TimeCreated,RecordId,Message
+
+$security=Get-WinEvent -FilterHashtable @{LogName='Security';Id=4698;StartTime=$start} -ErrorAction SilentlyContinue
+$securityRows=foreach($event in $security){
+  [xml]$xml=$event.ToXml();$data=@{}
+  foreach($item in $xml.Event.EventData.Data){$data[[string]$item.Name]=[string]$item.'#text'}
+  if($data.TaskName -match 'SOC-LAB-PERSISTENCE-001'){
+    [pscustomobject]@{Time=$event.TimeCreated;RecordId=$event.RecordId;TaskName=$data.TaskName;SubjectUser=$data.SubjectUserName;TaskContent=$data.TaskContent}
+  }
+}
+$securityRows | Format-List`,
+        expected: '106 غالبًا؛ 4698 فقط إذا audit policy التقطته.',
+        why: 'الـtask ليست suspicious بسبب وجودها فقط؛ قيّم الاسم والمالك والaction والtrigger والتوقيع/المسار والتغيير المعتمد.'
       },
       {
         step: 5,
-        description: 'استعلم عن Event 7045 (Service Installed)',
-        command: `Get-WinEvent -FilterHashtable @{LogName='System';Id=7045} -MaxEvents 20 |
-  Select-Object TimeCreated,
-    @{Name='ServiceName';Expression={$_.Properties[0].Value}},
-    @{Name='ImagePath';Expression={$_.Properties[1].Value}}`,
-        expected: 'الخدمات المثبتة'
-      },
-      {
-        step: 6,
-        description: 'تنظيف: احذف المهمة الاختبارية',
-        command: 'schtasks /delete /tn "WindowsUpdate" /f',
-        expected: 'Task deleted'
+        description: 'احذف task المحددة فقط والملفات، ثم تحقق من غيابها.',
+        command: `Unregister-ScheduledTask -TaskName 'SOC-LAB-PERSISTENCE-001' -Confirm:$false
+Remove-Item C:\\SOC-Lab\\task.xml,C:\\SOC-Lab\\win-lab5-start.txt,C:\\SOC-Lab\\scheduled-task-marker.txt -Force -ErrorAction SilentlyContinue
+if(Get-ScheduledTask -TaskName 'SOC-LAB-PERSISTENCE-001' -ErrorAction SilentlyContinue){throw 'Cleanup failed'}else{'Cleanup verified'}`,
+        expected: 'Cleanup verified ولا marker file.',
+        caution: 'لا تحذف task بالاسم التقريبي أو wildcard.'
       }
     ],
-    filters: [
-      'Event 4698 - Scheduled Task Created',
-      'Event 7045 - Service Installed',
-      'Event 4697 - Service Installed (Security)',
-      'TaskScheduler Event 106'
-    ],
-    deliverable: `# Lab 5: Persistence Detection
+    filters: ['TaskScheduler 106: registration', 'Security 4698: task created إذا audit مفعّل', '4699: task deleted', 'XML action/trigger/principal'],
+    evidence: ['Baseline absence', 'Exported task XML/hash قبل الحذف', '106/4698 Record IDs أو gap', 'Action/trigger/principal assessment', 'cleanup verification'],
+    cleanup: `Unregister-ScheduledTask -TaskName 'SOC-LAB-PERSISTENCE-001' -Confirm:$false -ErrorAction SilentlyContinue; Remove-Item C:\\SOC-Lab\\task.xml,C:\\SOC-Lab\\win-lab5-start.txt,C:\\SOC-Lab\\scheduled-task-marker.txt -Force -ErrorAction SilentlyContinue`,
+    deliverable: `# Scheduled Task Persistence Case
 
-## Scheduled Tasks Analysis
-### Suspicious Tasks Found
-| Task Name | Action | Schedule | Created |
-|-----------|--------|----------|---------|
-| WindowsUpdate | powershell.exe -nop -w hidden | Every 5 min | |
+## Baseline and change
+- Snapshot/time: ___
+- Task absent before creation: ___
+- Expected lab change: ___
 
-### Event 4698 Details
-\`\`\`xml
-[تفاصيل الحدث]
-\`\`\`
+## Evidence
+| Source | Event/Record ID | Task | Principal | Action | Trigger |
+|---|---|---|---|---|---|
+| | | | | | |
 
-## Services Analysis
-### Recently Installed Services
-| Service Name | Image Path | Start Type |
-|--------------|------------|------------|
-| | | |
+## Assessment
+- Why this is a Benign Positive: ___
+- What would raise concern in production: ___
+- Missing telemetry: ___
+- ATT&CK mapping: T1053.005 only because scheduled-task behavior exists; not proof of an attack
 
-## Persistence Indicators
-- [ ] Task runs PowerShell with -hidden
-- [ ] Task runs from temp/user folder
-- [ ] Service with suspicious path
-- [ ] Task/Service created recently
-
-## MITRE ATT&CK
-- T1053.005 - Scheduled Task
-- T1543.003 - Windows Service
-
-## Cleanup Actions
-- [x] Deleted test task "WindowsUpdate"
-
-## Recommendations
-1. مراقبة Event 4698 و 7045
-2. مراجعة المهام الدورية
-3. تفعيل Sysmon لمراقبة أعمق`
+## Cleanup
+- Task absent: ___
+- Exact files removed: ___
+- Snapshot restored if needed: ___`
   }
 ];

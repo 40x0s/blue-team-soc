@@ -1,185 +1,82 @@
 import Alert from '../../components/Alert';
 import CodeBlock from '../../components/CodeBlock';
+import Table from '../../components/Table';
 
-const LinuxNetworkSection = () => {
-  return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3">
-        <span>🌐</span>
-        تحليل الشبكة على Linux
-      </h1>
+const LinuxNetworkSection = () => (
+  <div className="space-y-8">
+    <h1 className="text-3xl font-bold text-cyan-400">🌐 Linux Network Triage</h1>
+    <Alert type="info" title="ابدأ بسؤال">
+      هل تحقق في listening exposure، اتصال قائم، أم سلوك تاريخي؟ <span dir="ltr">ss/lsof</span> يعرضان snapshot؛ لإثبات ما حدث أمس تحتاج firewall/proxy/flow/PCAP/audit أو EDR حسب التوفر.
+    </Alert>
 
-      <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">1. Inventory read-only</h2>
+      <CodeBlock language="bash" code={`date --iso-8601=seconds
+ip -brief address
+ip route show
+ip neigh show
 
-      {/* netstat */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-bold text-white">أمر netstat (قديم لكن شائع)</h2>
+# TCP listening مع process إن سمحت الصلاحيات
+sudo ss -lntp
+# TCP sessions، ثم UDP sockets
+sudo ss -antp
+sudo ss -aunp
+# Summary
+ss -s`} />
+      <Table headers={['علامة ss', 'المعنى', 'ملاحظة']} rows={[
+        ['-l', 'Listening only', 'لا يعرض client sessions فقط'],
+        ['-a', 'Listening + non-listening', 'ليس history'],
+        ['-n', 'Numeric addresses/ports', 'يمنع DNS lookup وتأثيره الجانبي'],
+        ['-t / -u', 'TCP / UDP', 'UDP بلا connection state مماثل لـTCP'],
+        ['-p', 'Process context', 'قد يحتاج privilege ولا يظهر دائمًا'],
+      ]} />
+    </section>
 
-        <CodeBlock
-          title="عرض كل الاتصالات"
-          code={`netstat -antup`}
-        />
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">2. اربط socket بـprocess</h2>
+      <CodeBlock language="bash" code={`pid=1234
+sudo ss -antp | grep -F "pid=$pid," || true
+sudo lsof -nP -a -p "$pid" -i
+ps -p "$pid" -o user,pid,ppid,lstart,etime,comm,args
+sudo readlink -- "/proc/$pid/exe"
+sudo sha256sum -- "/proc/$pid/exe"`} />
+      <p className="leading-8 text-gray-300">استخدم grep للفرز فقط؛ تحقق يدويًا من PID. اربط executable/hash/user/parent/start time بالـlocal/remote address وstate، ثم بالـDNS/proxy/flow.</p>
+    </section>
 
-        <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-          <h3 className="text-cyan-400 font-bold mb-3">شرح الخيارات</h3>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-sm">
-            <div className="bg-gray-700/50 rounded p-2 text-center">
-              <code className="text-green-400">-a</code>
-              <p className="text-gray-400 text-xs">جميع الاتصالات</p>
-            </div>
-            <div className="bg-gray-700/50 rounded p-2 text-center">
-              <code className="text-green-400">-n</code>
-              <p className="text-gray-400 text-xs">أرقام بدل أسماء</p>
-            </div>
-            <div className="bg-gray-700/50 rounded p-2 text-center">
-              <code className="text-green-400">-t</code>
-              <p className="text-gray-400 text-xs">TCP</p>
-            </div>
-            <div className="bg-gray-700/50 rounded p-2 text-center">
-              <code className="text-green-400">-u</code>
-              <p className="text-gray-400 text-xs">UDP</p>
-            </div>
-            <div className="bg-gray-700/50 rounded p-2 text-center">
-              <code className="text-green-400">-p</code>
-              <p className="text-gray-400 text-xs">مع اسم العملية</p>
-            </div>
-          </div>
-        </div>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">3. ما الذي يرفع الفرضية ولا يصنع verdict؟</h2>
+      <div className="grid md:grid-cols-2 gap-4">
+        {[
+          ['Public destination جديد', 'قد يكون CDN/update/SaaS. تحقق من owner/domain/process/prevalence.'],
+          ['منفذ 4444 أو رقم غير معتاد', 'Port ليس هوية Metasploit؛ حدد protocol/process/destination.'],
+          ['Listening على 0.0.0.0', 'يعني كل interfaces محليًا؛ exposure الفعلي يتأثر firewall/NAT/security groups.'],
+          ['اتصالات متكررة', 'ss منفرد لا يثبت periodicity. استخدم time-series وقياس interval/jitter/bytes.'],
+          ['Root process يتصل خارجيًا', 'services والتحديثات تفعل ذلك. provenance وbaseline مطلوبان.'],
+          ['IP reputation match', 'IP قديم/shared/CDN. تحقق من first/last seen والسياق والـTLS/DNS.'],
+        ].map(([title, body]) => <article key={title} className="rounded-xl border border-gray-700 bg-gray-800/50 p-5"><h3 className="font-bold text-yellow-300">{title}</h3><p className="mt-2 text-sm leading-7 text-gray-300">{body}</p></article>)}
+      </div>
+    </section>
 
-        <CodeBlock
-          title="عرض المنافذ المفتوحة فقط (Listening)"
-          code={`netstat -tlnp`}
-        />
-      </section>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">4. Evidence record</h2>
+      <CodeBlock language="text" code={`Observed UTC: ...
+Host / interface / namespace or container: ...
+Local address:port → Remote address:port / state: ...
+PID / start time / user / parent: ...
+Executable / SHA-256 / package provenance: ...
+DNS-TLS-proxy-flow correlation: ...
+Expected owner/change/baseline: ...
+Alternative explanations and missing data: ...
+Decision / confidence / authorized next action: ...`} />
+      <Alert type="danger" title="لا توقف process من socket وحده">
+        حفظ evidence، عزل host، إضافة firewall rule أو إرسال signal إجراءات عالية الأثر. اتبع playbook والتفويض، قيّم availability وcluster/failover، وحدد rollback وverification.
+      </Alert>
+    </section>
 
-      {/* ss */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">أمر ss (الحديث والأسرع) ⭐</h2>
-
-        <Alert type="info">
-          <code className="bg-gray-700 px-2 py-1 rounded">ss</code> أسرع وأفضل من netstat في الأنظمة الحديثة.
-        </Alert>
-
-        <CodeBlock
-          title="أوامر ss الأساسية"
-          code={`# عرض كل الاتصالات
-ss -antup
-
-# عرض المنافذ المفتوحة
-ss -tlnp
-
-# عرض الاتصالات لعنوان معين
-ss -ant dst 192.168.1.10
-
-# عرض الاتصالات من عنوان معين
-ss -ant src 192.168.1.10
-
-# إحصائيات الاتصالات
-ss -s`}
-        />
-      </section>
-
-      {/* أمر ip */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">أمر ip</h2>
-
-        <CodeBlock
-          title="أوامر ip الأساسية"
-          code={`# عرض واجهات الشبكة
-ip addr
-ip a
-
-# جدول التوجيه
-ip route
-
-# جدول ARP
-ip neigh`}
-        />
-      </section>
-
-      {/* علامات مشبوهة */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">🚨 علامات مشبوهة على الشبكة</h2>
-
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="bg-red-900/20 rounded-xl p-6 border border-red-500/30">
-            <h3 className="text-red-400 font-bold mb-4">⚠️ اتصالات مشبوهة</h3>
-            <ul className="space-y-2 text-gray-300 text-sm">
-              <li>• اتصال صادر إلى IP عام غير معتاد</li>
-              <li>• عملية تستمع على منفذ غير معتاد (4444, 6666)</li>
-              <li>• اتصالات كثيرة لنفس العنوان (beaconing)</li>
-              <li>• عملية ليست خدمة معروفة تستمع على منافذ</li>
-            </ul>
-          </div>
-
-          <div className="bg-yellow-900/20 rounded-xl p-6 border border-yellow-500/30">
-            <h3 className="text-yellow-400 font-bold mb-4">🔍 أوامر الفحص</h3>
-            <CodeBlock
-              code={`# الاتصالات النشطة
-ss -antup | grep ESTAB
-
-# المنافذ المفتوحة
-ss -tlnp
-
-# البحث عن منافذ مشبوهة
-ss -tlnp | grep -E ":4444|:6666|:1337"`}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* مثال تحقيق */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">📋 مثال: تحقيق في اتصال مشبوه</h2>
-
-        <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-          <CodeBlock
-            code={`# 1. اكتشف الاتصالات النشطة
-ss -antup | grep ESTAB
-
-# 2. لنفترض وجدت اتصال مشبوه على منفذ 4444
-# حدد رقم العملية (PID)
-ss -antup | grep 4444
-
-# 3. تحقق من العملية
-ps aux | grep PID
-ls -l /proc/PID/exe
-cat /proc/PID/cmdline
-
-# 4. اكتشف كل اتصالات هذه العملية
-lsof -i -p PID
-
-# 5. وثّق ثم أوقف العملية
-sudo kill -9 PID`}
-          />
-        </div>
-      </section>
-
-      {/* ملخص سريع */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">📊 ملخص أوامر الشبكة</h2>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-cyan-900/20 rounded-lg p-4 border border-cyan-500/30 text-center">
-            <code className="text-cyan-400 text-lg">ss -antup</code>
-            <p className="text-gray-400 text-xs mt-2">كل الاتصالات</p>
-          </div>
-          <div className="bg-cyan-900/20 rounded-lg p-4 border border-cyan-500/30 text-center">
-            <code className="text-cyan-400 text-lg">ss -tlnp</code>
-            <p className="text-gray-400 text-xs mt-2">المنافذ المفتوحة</p>
-          </div>
-          <div className="bg-cyan-900/20 rounded-lg p-4 border border-cyan-500/30 text-center">
-            <code className="text-cyan-400 text-lg">ip addr</code>
-            <p className="text-gray-400 text-xs mt-2">واجهات الشبكة</p>
-          </div>
-          <div className="bg-cyan-900/20 rounded-lg p-4 border border-cyan-500/30 text-center">
-            <code className="text-cyan-400 text-lg">lsof -i</code>
-            <p className="text-gray-400 text-xs mt-2">الملفات الشبكية</p>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-};
+    <Alert type="golden" title="تدريب آمن">
+      افتح في VM اتصالًا موثقًا إلى <span dir="ltr">example.com:443</span>، وحدد process/socket وDNS/TLS metadata. اكتب بدقة ما لا تستطيع <span dir="ltr">ss</span> إثباته عن محتوى HTTPS.
+    </Alert>
+  </div>
+);
 
 export default LinuxNetworkSection;

@@ -8,8 +8,8 @@ export const CareerCVSection = () => (
     <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3"><span>📄</span>كتابة CV احترافي لـ SOC Analyst</h1>
     <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
 
-    <Alert type="golden" title="لماذا هذا الدرس الآن؟">
-      خلصت كل المحتوى التقني. الآن تحتاج تحول معرفتك إلى <strong>ملف توظيف يفتح لك الأبواب</strong>.
+    <Alert type="golden" title="لماذا هذا الدرس مهم؟">
+      عندما تملك أدلة تقنية حقيقية، تحتاج تحويلها إلى ملف توظيف واضح يستطيع المراجع التحقق منه. ابدأ مبكرًا وحدّثه كلما أنجزت مشروعًا متقنًا.
     </Alert>
 
     {/* القواعد */}
@@ -19,9 +19,8 @@ export const CareerCVSection = () => (
       <div className="grid md:grid-cols-2 gap-4">
         {/* القاعدة 1 */}
         <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-          <h3 className="text-cyan-400 font-bold mb-3">📏 القاعدة 1: صفحة واحدة فقط</h3>
-          <p className="text-gray-300 text-sm">أنت Junior. لا يوجد سبب لأكثر من صفحة.</p>
-          <p className="text-yellow-400 text-sm mt-2">المُوظِف يقضي <strong>6-10 ثوانٍ</strong> على CV.</p>
+          <h3 className="text-cyan-400 font-bold mb-3">📏 القاعدة 1: الاختصار والملاءمة</h3>
+          <p className="text-gray-300 text-sm">صفحة واحدة غالبًا تكفي لطالب أو Junior، لكن الوضوح والدليل أهم من رقم جامد. اجعل أول نصف صفحة يجيب: من أنت؟ ما الدور؟ وما أقوى دليل مهارة؟</p>
         </div>
 
         {/* القاعدة 2 */}
@@ -33,8 +32,8 @@ export const CareerCVSection = () => (
             <li>❌ لا صور أو ألوان كثيرة</li>
             <li>❌ لا headers و footers</li>
             <li>✅ خطوط عادية (Calibri, Arial)</li>
-            <li>✅ احفظ PDF</li>
-            <li>✅ الكلمات المفتاحية من الوصف الوظيفي</li>
+            <li>✅ اتبع صيغة الإعلان واختبر استخراج النص</li>
+            <li>✅ استخدم كلمات الإعلان التي تنطبق عليك فقط</li>
           </ul>
         </div>
 
@@ -49,8 +48,8 @@ export const CareerCVSection = () => (
             </div>
             <div className="bg-green-900/20 rounded p-3 border border-green-500/30">
               <p className="text-green-400 text-xs font-bold mb-2">✅ صحيح:</p>
-              <p className="text-gray-300 text-sm">"Built 8 hands-on SOC projects including SIEM deployment and threat detection"</p>
-              <p className="text-gray-300 text-sm">"Analyzed 1000+ Windows Security Events to detect brute force and lateral movement"</p>
+              <p className="text-gray-300 text-sm">"Investigated a simulated password-spray case using Windows events and documented scope, timeline, and escalation decision"</p>
+              <p className="text-gray-300 text-sm">"Built and validated a Wazuh rule against [N] labeled lab events, documenting [measured result] and false positives"</p>
             </div>
           </div>
         </div>
@@ -67,6 +66,9 @@ export const CareerCVSection = () => (
           ))}
         </div>
       </div>
+      <Alert type="warning" title="ليست قائمة نسخ">
+        ضع فقط الكلمات التي تستطيع إثباتها بمشروع أو شرحها في مقابلة. وجود Splunk أو Python أو Malware Analysis في الوصف الوظيفي لا يبرر إضافتها إن لم تستخدمها فعلًا.
+      </Alert>
     </section>
 
     {/* ترتيب الأقسام */}
@@ -106,122 +108,61 @@ export const CareerCVTemplateSection = () => (
 
     <Alert type="info">انسخ هذا القالب وعدّل عليه بمعلوماتك الشخصية ومشاريعك الفعلية.</Alert>
 
+    <Alert type="danger" title="ممنوع استخدام بيانات المثال كأنها إنجازاتك">
+      كل حقل بين أقواس مربعة يجب أن تستبدله بحقيقة قابلة للإثبات أو تحذفه. لا تكتب عدد agents أو rules أو أحداث أو نسبة تحسين إلا إذا نفذتها وقستها واحتفظت بالدليل.
+    </Alert>
+
     <CodeBlock
-      title="CV Template - Junior SOC Analyst"
-      code={`============================================================
-                    AHMED MOHAMMED ALANAZI
-============================================================
-Riyadh, Saudi Arabia
-+966 5XX XXX XXXX
-ahmed.alanazi@email.com
-linkedin.com/in/ahmed-alanazi-sec
-github.com/ahmed-alanazi-sec
+      title="CV Template - Evidence Based"
+      code={`[FULL NAME]
+[City, Country] | [Phone] | [Professional email]
+LinkedIn: [URL] | GitHub: [URL]
 
-============================================================
-                   PROFESSIONAL SUMMARY
-============================================================
-Junior SOC Analyst with hands-on experience in threat
-detection, incident investigation, and log analysis across
-Windows and Linux environments. Built 8+ security projects
-including SIEM deployment, PowerShell attack detection, and
-network traffic analysis. Proficient in MITRE ATT&CK mapping,
-incident reporting, and security automation using Python
-and PowerShell.
+TARGET
+Junior SOC Analyst / Cybersecurity Defense Analyst
 
-============================================================
-                    TECHNICAL SKILLS
-============================================================
-Security Tools:    Wireshark, Sysmon, Wazuh SIEM, Event
-                   Viewer, Windows Defender, Nmap
+SUMMARY
+Final-year [major] student with hands-on practice in security
+monitoring, Windows/Linux log analysis, network traffic analysis,
+and incident documentation. Demonstrated these skills through
+[2–3 strongest real projects]. Comfortable explaining investigation
+scope, timelines, SIEM queries, and escalation decisions.
 
-Operating Systems: Windows Server 2022, Windows 11,
-                   Ubuntu Server 22.04, Kali Linux
+TECHNICAL SKILLS
+SIEM / Querying: [only tools and languages you actually used]
+Endpoint / Logs: [actual Windows/Linux telemetry used]
+Network: [protocols and tools you can demonstrate]
+Frameworks: [frameworks you applied in a report]
+Scripting: [language + what you built; omit if not demonstrable]
 
-Log Analysis:      Windows Security Events (4624/4625/4688/
-                   4720/7045/1102), Sysmon Events,
-                   PowerShell Script Block Logging (4104),
-                   Linux auth.log, syslog, journalctl
+SELECTED PROJECTS
+[PROJECT TITLE] | [GitHub URL]
+- Investigated [lab scenario] using [data sources/tools].
+- Correlated [specific events] to build a timeline covering [scope].
+- Documented [classification/escalation/detection] and [limitation].
+- Measured [N labeled events / query runtime / alert volume] using
+  [method].                         # احذف السطر إن لم تقس شيئًا
 
-Scripting:         Python (log parsing, IOC extraction),
-                   PowerShell (Get-WinEvent, security queries),
-                   Bash (log analysis automation)
+[PROJECT TITLE] | [GitHub URL]
+- Built [what you actually built] in an isolated home lab.
+- Validated it with [benign test] and documented false positives,
+  troubleshooting, cleanup, and sensitive-data redaction.
 
-Frameworks:        MITRE ATT&CK, NIST IR Lifecycle,
-                   Cyber Kill Chain, Pyramid of Pain
+EDUCATION
+Bachelor of [Major], [University], [Country]
+Expected graduation: [Month Year]
+Relevant coursework: [only relevant completed/current courses]
 
-Networking:        TCP/IP, DNS, TLS/SSL, HTTP/HTTPS, SMB,
-                   RDP, Kerberos, ICMP, ARP, DHCP
+CERTIFICATIONS
+[Certification actually earned] — [Issuer], [Year]
+# لا تضع “in progress” هنا؛ يمكن ذكر التدريب في قسم منفصل.
 
-Concepts:          Triage, Incident Response, Threat Intel,
-                   Active Directory, IOC/IOA, Phishing,
-                   Detection Engineering
+TRAINING
+[Course/platform/path actually completed or actively studied]
+[Home lab topology in one short line]
 
-============================================================
-           PROJECTS & HANDS-ON EXPERIENCE
-============================================================
-SOC Blue Team Portfolio
-github.com/ahmed-alanazi-sec/soc-portfolio
-January 2025 - Present
-
-Wazuh SIEM Deployment & Detection Engineering
-- Deployed Wazuh SIEM with 3 agents (Windows Server,
-  Windows Client, Ubuntu) in home lab environment
-- Created 8 custom detection rules for PowerShell attacks,
-  lateral movement, and credential dumping
-- Mapped all detections to MITRE ATT&CK techniques
-- Reduced false positives by 40% through rule tuning
-
-Windows AD Attack Detection Lab
-- Simulated and detected PsExec lateral movement using
-  Windows Event 7045 and Sysmon Event 1
-- Analyzed 500+ security events to build complete attack
-  timeline from initial access to persistence
-- Created Sigma detection rules for common attack patterns
-
-Network Traffic Analysis
-- Captured and analyzed HTTPS traffic using Wireshark,
-  documenting DNS, TCP, and TLS handshake phases
-- Detected port scanning patterns and DGA-generated DNS
-  queries in lab environment
-
-Linux SSH Brute Force Investigation
-- Analyzed auth.log to investigate 500+ failed SSH attempts
-- Built Python tool for automated IOC extraction
-- Created Bash script for real-time log summarization
-
-Phishing Email Analysis
-- Analyzed phishing campaigns including header verification,
-  SPF/DKIM/DMARC validation, and URL reputation
-- Created standardized phishing investigation playbook
-
-Threat Hunting Exercises
-- Conducted proactive hunts for C2 beaconing patterns
-- Created KQL and SPL queries for automated hunting
-
-============================================================
-                      EDUCATION
-============================================================
-Bachelor of Science in Cybersecurity
-[University Name], Riyadh, Saudi Arabia
-Expected Graduation: June 2025
-
-Relevant Coursework: Network Security, OS Security,
-Digital Forensics, Cryptography, Risk Management
-
-============================================================
-                    CERTIFICATIONS
-============================================================
-- (ISC)2 Certified in Cybersecurity (CC)         2025
-- CompTIA Security+ (In Progress)       Expected 2025
-
-============================================================
-                 TRAINING & PLATFORMS
-============================================================
-- TryHackMe: SOC Level 1 Path (Top X%)
-- LetsDefend: SOC Analyst Learning Path
-- CyberDefenders: DFIR Challenges
-- Home Lab: VMware environment with AD, Sysmon,
-  Wazuh SIEM, and multi-OS investigation setup`}
+LANGUAGES
+Arabic: [level] | English: [honest level]`}
     />
 
     <section className="space-y-4 mt-8">
@@ -239,11 +180,12 @@ Digital Forensics, Cryptography, Risk Management
       <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
         <h3 className="text-cyan-400 font-bold mb-3">مثال: إذا الوظيفة تطلب Splunk + MITRE</h3>
         <CodeBlock code={`# عدّل Summary ليصبح:
-Junior SOC Analyst with hands-on experience in Windows log
-analysis and incident response. Proficient in MITRE ATT&CK
-mapping and SIEM operations including Splunk and Wazuh.
-Built 8+ security projects demonstrating threat detection
-and investigation capabilities.`} />
+Final-year cybersecurity student with tested self-directed lab
+projects in Windows log analysis and SOC case documentation.
+Applied MITRE ATT&CK mapping and Wazuh SIEM operations
+[add Splunk only if you actually used and can demonstrate it].
+Portfolio includes reproducible evidence, limitations, and
+escalation decisions.`} />
       </div>
     </section>
   </div>
@@ -252,17 +194,17 @@ and investigation capabilities.`} />
 // === Mistakes Section ===
 export const CareerMistakesSection = () => (
   <div className="space-y-8">
-    <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3"><span>❌</span>أخطاء شائعة تقتل CV</h1>
+    <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3"><span>❌</span>أخطاء شائعة تضعف CV</h1>
     <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
 
     <div className="grid md:grid-cols-2 gap-4">
       {[
-        { title: 'Objective بدل Summary', bad: '"Seeking a position where I can learn..."', good: '"Junior SOC Analyst with hands-on experience in..."', note: 'المُوظِف لا يهتم بما تريد. يهتم بما تستطيع تقديمه.' },
+        { title: 'Objective عام بدل Summary مدعوم', bad: '"Seeking a position where I can learn..."', good: '"Final-year cybersecurity student with tested SOC lab projects in..."', note: 'اذكر القيمة والدليل وما تستهدفه باختصار، دون ادعاء خبرة وظيفية لم تمارسها.' },
         { title: 'مهارات بدون دليل', bad: 'Skills: Wireshark, Splunk, Python, SIEM (بدون أي إثبات)', good: 'مهارات + مشاريع تثبت استخدامها', note: '' },
-        { title: 'معلومات شخصية زائدة', bad: 'تاريخ الميلاد، الجنسية، الحالة الاجتماعية، صورة، رقم الهوية', good: 'فقط: الاسم، الموقع، الهاتف، الإيميل، LinkedIn، GitHub', note: '' },
-        { title: 'GPA منخفض', bad: 'ذكر GPA أقل من 3.5', good: 'إذا أعلى من 3.5 اذكره. أقل = لا تذكره', note: '' },
-        { title: 'أخطاء إنجليزية', bad: 'خطأ واحد في spelling = رفض فوري في بعض الشركات', good: 'راجع 3 مرات + استخدم Grammarly', note: '' },
-        { title: 'ملف Word بدل PDF', bad: 'Word قد يتغير تنسيقه', good: 'دائماً أرسل PDF', note: '' },
+        { title: 'معلومات شخصية غير مطلوبة', bad: 'رقم هوية أو بيانات حساسة لا يطلبها الإعلان', good: 'الاسم، الموقع، الهاتف، الإيميل، LinkedIn، GitHub؛ وأضف ما يطلبه السوق/الدور قانونيًا فقط', note: 'الجنسية أو أهلية العمل قد تكون مطلوبة لبعض الأدوار؛ تعامل معها بصدق ولا تنشر رقم هوية.' },
+        { title: 'GPA بلا سياق', bad: 'رقم بلا scale أو تضليل بالتقريب', good: 'اذكره اختياريًا مع scale والتقدير كما هو، خصوصًا إذا طلب الإعلان ذلك', note: '' },
+        { title: 'أخطاء إنجليزية', bad: 'أخطاء متكررة تقلل الثقة في قدرتك على التوثيق', good: 'راجع بنفسك ثم بأداة تدقيق وشخص آخر إن أمكن', note: '' },
+        { title: 'صيغة الملف لا تطابق الطلب', bad: 'Word قد يتغير تنسيقه، وPDF قد يرفضه نظام يطلب DOCX', good: 'اتبع صيغة الإعلان؛ PDF غالبًا يحفظ التنسيق إذا لم يُطلب غيره', note: 'اختبر قابلية النسخ والقراءة في ATS ولا تستخدم PDF ممسوحًا كصورة.' },
         { title: 'اسم الملف سيء', bad: '"CV.pdf" أو "resume-final-final2.pdf"', good: '"Ahmed-Alanazi-SOC-Analyst-Resume.pdf"', note: '' },
       ].map((mistake, i) => (
         <div key={i} className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
@@ -283,56 +225,51 @@ export const CareerCoverLetterSection = () => (
     <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
 
     <Alert type="info">
-      حتى لو لم يُطلب، Cover Letter قصير يميزك عن الباقين.
+      أرسل Cover Letter عندما يكون مطلوبًا أو تستطيع تخصيصه بدليل واضح على ملاءمتك. رسالة عامة منسوخة قد لا تضيف قيمة.
     </Alert>
 
     <CodeBlock
       title="قالب Cover Letter"
-      code={`Subject: Application for Junior SOC Analyst - [Company Name]
+      code={`Subject: Application for [Exact Job Title] - [Your Name]
 
-Dear Hiring Manager,
+Dear [Hiring Manager or Team],
 
-I am writing to express my interest in the Junior SOC Analyst
-position at [Company Name]. As a senior cybersecurity student
-at [University], I have built practical skills in threat
-detection, incident investigation, and security monitoring
-through extensive hands-on projects.
+I am a final-year cybersecurity student applying for the
+[Exact Job Title] role at [Company]. The role's focus on
+[one requirement from the posting] matches work I completed
+in self-directed SOC lab projects.
 
-My experience includes:
-- Deploying and configuring Wazuh SIEM with custom detection
-  rules mapped to MITRE ATT&CK
-- Investigating Windows security events including brute force
-  attacks, lateral movement, and credential dumping
-- Building automated analysis tools using Python and PowerShell
-  for log parsing and IOC extraction
-- Creating comprehensive incident reports following NIST IR
-  Lifecycle methodology
+Relevant evidence:
+- [Completed project]: [measured result or investigation output]
+- [Completed project]: [query, timeline, detection test, or report]
+- [Relevant skill]: [where the portfolio proves it]
 
-I have documented all my projects on GitHub at:
-github.com/[your-username]/soc-portfolio
+In [most relevant project], I [what you actually did], tested
+[positive/negative or failure case], and documented [decision,
+limitations, and safe next action]. The sanitized evidence is at:
+[direct portfolio URL]
 
-I am eager to contribute to [Company Name]'s security
-operations team and continue developing my skills in a
-professional SOC environment.
+I would welcome the opportunity to explain this work and how
+I approach triage, escalation, and careful documentation.
 
-Thank you for considering my application.
+Thank you for your consideration.
 
 Best regards,
-Ahmed Mohammed Alanazi
-+966 5XX XXX XXXX
-ahmed.alanazi@email.com
-linkedin.com/in/ahmed-alanazi-sec`}
+[Your real name]
+[Phone appropriate to your location]
+[Email] | [LinkedIn] | [Portfolio]`}
     />
+    <Alert type="warning">احذف أي bullet لا تستطيع فتح دليله وشرحه. «Self-directed lab project» وصف قوي وصادق؛ لا تحوّله إلى خبرة موظف أو incident حقيقي.</Alert>
 
     <section className="space-y-4 mt-8">
       <h2 className="text-2xl font-bold text-white">📄 ملخص CV بالعربي (إذا طُلب)</h2>
       <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
         <p className="text-gray-300 text-sm leading-relaxed">
-          محلل أمن سيبراني مبتدئ متخصص في عمليات المراقبة الأمنية وكشف التهديدات والاستجابة للحوادث. خبرة عملية في تحليل سجلات Windows و Linux واستخدام أنظمة SIEM وأدوات التحقيق الأمني. بنيت أكثر من 8 مشاريع عملية تشمل نشر SIEM وكشف الهجمات وكتابة قواعد الكشف مع ربطها بإطار MITRE ATT&CK.
+          طالب أمن سيبراني في السنة الأخيرة يطوّر مهارات عملية في المراقبة الأمنية وتحليل سجلات Windows وLinux وحركة الشبكة وتوثيق الحوادث. طبّقت هذه المهارات في [اذكر مشروعين حقيقيين]، مع كتابة timeline واستعلامات وقرارات تصعيد وربط السلوك بـMITRE ATT&CK حيث كان الربط مبررًا.
         </p>
       </div>
       <Alert type="info">
-        الشركات الأجنبية والمختلطة: إنجليزي فقط | القطاع الحكومي: عربي وإنجليزي | الشركات السعودية الكبيرة: إنجليزي غالباً
+        اتبع لغة الإعلان وتعليماته. الإنجليزية شائعة في أدوار SOC والتوثيق، وقد تُطلب نسخة عربية أو ثنائية اللغة حسب الجهة؛ لا تفترض قاعدة واحدة لكل القطاعات.
       </Alert>
     </section>
   </div>
@@ -344,80 +281,39 @@ export const CareerSaudiSection = () => (
     <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3"><span>🇸🇦</span>نصائح خاصة بالسوق السعودي</h1>
     <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
 
-    <Alert type="golden" title="الفرص كثيرة!">
-      رؤية 2030 وتوسع الأمن السيبراني يفتح أبواب كثيرة. الهيئة الوطنية NCA وشركات MSSP تنمو بسرعة.
+    <Alert type="warning" title="افحص الأهلية قبل استثمار وقتك في الطلب">
+      تختلف الفرص حسب المدينة والجنسية وأهلية العمل والقطاع. بعض الوظائف والأدوار المنظمة لدى مقدمي خدمات SOC قد تفرض متطلبات تأهيل أو جنسية سعودية. اقرأ الإعلان الحالي، وإطار NCA للقوى العاملة ومتطلبات الجهة، ولا تفترض الأهلية من عنوان الوظيفة.
     </Alert>
 
-    {/* الشركات المستهدفة */}
+    {/* خريطة الجهات المستهدفة */}
     <section className="space-y-4">
-      <h2 className="text-2xl font-bold text-white">🏢 الشركات المستهدفة</h2>
-
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="bg-green-900/20 rounded-xl p-4 border border-green-500/30">
-          <h3 className="text-green-400 font-bold mb-3">🏛️ القطاع الحكومي</h3>
-          <ul className="text-gray-300 text-sm space-y-1">
-            <li>• الهيئة الوطنية للأمن السيبراني NCA</li>
-            <li>• SITE (السعودية لتقنية المعلومات)</li>
-            <li>• وزارة الداخلية</li>
-            <li>• CERT-SA المركز الوطني الإرشادي</li>
-          </ul>
-        </div>
-
-        <div className="bg-blue-900/20 rounded-xl p-4 border border-blue-500/30">
-          <h3 className="text-blue-400 font-bold mb-3">🏦 البنوك والمالية</h3>
-          <ul className="text-gray-300 text-sm space-y-1">
-            <li>• البنك المركزي SAMA</li>
-            <li>• الراجحي / الأهلي / بنك الرياض</li>
-            <li>• سوق المال (تداول)</li>
-          </ul>
-        </div>
-
-        <div className="bg-purple-900/20 rounded-xl p-4 border border-purple-500/30">
-          <h3 className="text-purple-400 font-bold mb-3">📡 التقنية والاتصالات</h3>
-          <ul className="text-gray-300 text-sm space-y-1">
-            <li>• STC / Solutions by STC</li>
-            <li>• Mobily / Zain</li>
-            <li>• SCCC</li>
-          </ul>
-        </div>
-
-        <div className="bg-red-900/20 rounded-xl p-4 border border-red-500/30">
-          <h3 className="text-red-400 font-bold mb-3">🛡️ شركات الأمن السيبراني</h3>
-          <ul className="text-gray-300 text-sm space-y-1">
-            <li>• Sirar by STC</li>
-            <li>• Elm / DarkMatter / Help AG</li>
-            <li>• Integrity Global</li>
-          </ul>
-        </div>
-
-        <div className="bg-yellow-900/20 rounded-xl p-4 border border-yellow-500/30">
-          <h3 className="text-yellow-400 font-bold mb-3">🏭 الشركات الكبرى</h3>
-          <ul className="text-gray-300 text-sm space-y-1">
-            <li>• أرامكو / سابك</li>
-            <li>• نيوم</li>
-            <li>• مشاريع البحر الأحمر</li>
-          </ul>
-        </div>
-
-        <div className="bg-cyan-900/20 rounded-xl p-4 border border-cyan-500/30">
-          <h3 className="text-cyan-400 font-bold mb-3">🌐 MSSPs</h3>
-          <ul className="text-gray-300 text-sm space-y-1">
-            <li>• IBM Security</li>
-            <li>• Deloitte / EY / PwC Cyber</li>
-          </ul>
-        </div>
+      <h2 className="text-2xl font-bold text-white">🏢 خريطة الجهات المستهدفة — لا قائمة شغور ثابتة</h2>
+      <p className="text-sm leading-7 text-gray-300">ابحث أسبوعيًا في هذه الفئات، ثم سجل اسم الجهة والرابط وتاريخ الإعلان والأهلية والـstack. وجود الجهة هنا لا يعني أن لديها شاغرًا الآن أو أنك مؤهل قانونيًا له.</p>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {[
+          { title: 'MSOC / MSSP', text: 'مقدمو خدمات المراقبة المدارة؛ راجع القائمة/الترخيص الحاليين لدى NCA ومتطلبات الدور.' },
+          { title: 'الاتصالات والسحابة', text: 'فرق SOC وcloud security وmanaged services لدى المشغلين ومقدمي التقنية.' },
+          { title: 'البنوك والتأمين وFinTech', text: 'بيئات منظمة تحتاج monitoring وidentity وfraud/security coordination؛ تحقق من متطلبات SAMA والوظيفة.' },
+          { title: 'الشركات الكبرى والبنية الحرجة', text: 'طاقة وصناعة ونقل وصحة؛ قد تختلف متطلبات OT والأهلية والموقع.' },
+          { title: 'التكامل والاستشارات', text: 'System integrators وconsultancies التي تشغّل SIEM/EDR أو تقدم خدمات دفاعية لعملاء.' },
+          { title: 'الجهات الحكومية والبرامج', text: 'تحقق من الجنسية والتصريح والمنصة الرسمية؛ لا تفترض أن الإعلان متاح لغير السعوديين.' },
+        ].map(target => (
+          <article key={target.title} className="rounded-xl border border-gray-700 bg-gray-800/50 p-4">
+            <h3 className="font-bold text-cyan-300">{target.title}</h3>
+            <p className="mt-2 text-sm leading-6 text-gray-300">{target.text}</p>
+          </article>
+        ))}
       </div>
+      <Alert type="info">إذا كنت خارج السعودية أو لا تملك أهلية العمل، ابنِ مسارًا موازيًا: شركات محلية وإقليمية، أدوار remote المسموح بها قانونيًا، تدريب جامعي، وخدمات تقنية قريبة من SOC. لا تدفع رسومًا مقابل «عرض عمل»، ولا ترسل هوية أو بيانات بنكية قبل التحقق من الجهة والقناة.</Alert>
     </section>
 
     {/* كلمات مفتاحية */}
     <section className="space-y-4 mt-8">
-      <h2 className="text-2xl font-bold text-white">🔑 كلمات مفتاحية إضافية للسوق السعودي</h2>
-      <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-        <div className="flex flex-wrap gap-2">
-          {['NCA Framework','SAMA Cybersecurity Framework','Saudi Cybersecurity','PDPL','Essential Cybersecurity Controls (ECC)','Risk Management','Compliance','GRC'].map((kw, i) => (
-            <span key={i} className="px-3 py-1 bg-green-900/30 border border-green-500/30 rounded-full text-green-400 text-xs">{kw}</span>
-          ))}
-        </div>
+      <h2 className="text-2xl font-bold text-white">🔑 كلمات الإعلان: استخدمها فقط عندما تثبتها</h2>
+      <div className="space-y-4 rounded-xl border border-gray-700 bg-gray-800/50 p-4">
+        <p className="text-sm text-gray-300"><strong className="text-cyan-300">SOC core:</strong> SIEM، alert triage، escalation، Windows/Linux، networking، EDR، incident documentation، KQL/SPL حسب المنتج.</p>
+        <p className="text-sm text-gray-300"><strong className="text-green-300">سياق سعودي محتمل:</strong> NCA ECC وSCyWF، SAMA Cybersecurity Framework، PDPL أو متطلبات القطاع — أضفها فقط إذا طلبها الدور وتفهم علاقتها بعملك.</p>
+        <p className="text-xs leading-6 text-gray-400">لا تحشو CV بـGRC أو frameworks لمجرد عبور ATS. طابق المصطلح الحقيقي في الإعلان مع مشروع أو مقرر أو معرفة تستطيع مناقشتها.</p>
       </div>
     </section>
 
@@ -426,15 +322,15 @@ export const CareerSaudiSection = () => (
       <h2 className="text-2xl font-bold text-white">🌐 مواقع التقديم في السعودية</h2>
       <div className="grid md:grid-cols-3 gap-3">
         {[
-          { name: 'LinkedIn', desc: 'الأهم على الإطلاق', priority: 'high' },
-          { name: 'Jadarat (جدارات)', desc: 'منصة التوظيف الوطنية', priority: 'high' },
-          { name: 'Tamheer (تمهير)', desc: 'برنامج تدريب على رأس العمل', priority: 'high' },
-          { name: 'GulfTalent', desc: 'وظائف الخليج', priority: 'medium' },
-          { name: 'Bayt.com', desc: 'وظائف عامة', priority: 'medium' },
-          { name: 'Indeed Saudi', desc: 'البحث العام', priority: 'medium' },
-          { name: 'Bab Rizq Jameel', desc: 'مبادرة توظيف', priority: 'medium' },
-          { name: 'مواقع الشركات مباشرة', desc: 'Careers pages', priority: 'high' },
-          { name: 'Naukri Gulf', desc: 'وظائف تقنية', priority: 'low' },
+          { name: 'صفحات الشركات', desc: 'مصدر الإعلان والتعليمات الرسمي', priority: 'high' },
+          { name: 'LinkedIn Jobs', desc: 'بحث وتنبيهات وتحقق من الموظفين', priority: 'high' },
+          { name: 'Jadarat (جدارات)', desc: 'تحقق من شروط التسجيل والأهلية الحالية', priority: 'high' },
+          { name: 'Tamheer (تمهير)', desc: 'برنامج تدريب؛ تحقق من شروط الأهلية الحالية', priority: 'high' },
+          { name: 'مركز الجامعة والخريجون', desc: 'تدريب وإحالات ومعارض توظيف', priority: 'high' },
+          { name: 'GulfTalent / Bayt', desc: 'بحث إقليمي مع فحص تاريخ الإعلان', priority: 'medium' },
+          { name: 'Indeed', desc: 'بحث إضافي؛ ارجع للمصدر الرسمي', priority: 'medium' },
+          { name: 'وكالات موثوقة', desc: 'لا تدفع رسوم توظيف أو تأشيرة لجهة مجهولة', priority: 'medium' },
+          { name: 'قنوات محلية/إقليمية', desc: 'أضف القنوات التي تثبت نتائجها في tracker', priority: 'low' },
         ].map((site, i) => (
           <div key={i} className={`rounded-lg p-3 border ${
             site.priority === 'high' ? 'bg-green-900/20 border-green-500/30' :
@@ -453,21 +349,21 @@ export const CareerSaudiSection = () => (
 // === Career Checklist Section ===
 export const CareerChecklistSection = () => {
   const items = [
-    'CV صفحة واحدة بصيغة PDF',
-    'Professional Summary قوي',
-    'مهارات تقنية مرتبة',
-    '6+ مشاريع على GitHub',
-    'كل مشروع له README',
-    'LinkedIn محدث',
-    'Cover Letter جاهز',
-    'نسخة عربية جاهزة (اختياري)',
-    'قائمة 30+ شركة مستهدفة',
-    'حسابات على مواقع التوظيف',
-    'اسم ملف CV احترافي',
-    'مراجعة إملائية 3 مرات',
-    'روابط LinkedIn و GitHub تعمل',
-    'الكلمات المفتاحية موجودة في CV',
-    'المشاريع فيها أرقام ونتائج',
+    'CV مختصر يطابق صيغة الإعلان؛ صفحة واحدة غالبًا مناسبة للمبتدئ',
+    'Professional Summary صادق ومدعوم',
+    'مهارات تقنية مرتبطة بدليل',
+    'أقوى مشروعين أو ثلاثة مع artifacts منزوعة الحساسية',
+    'كل مشروع منشور له README قابل لإعادة الإنتاج',
+    'LinkedIn محدث ومتسق مع CV',
+    'قالب Cover Letter يُخصص لكل دور عند الحاجة',
+    'نسخة عربية عند طلبها أو فائدتها للسوق المستهدف',
+    'قائمة وظائف مستهدفة مع الرابط والتاريخ والتحقق من الأهلية',
+    'تنبيهات بحث على القنوات التي أثبتت نتائج',
+    'اسم ملف مهني مطابق للصيغة المطلوبة',
+    'مراجعة ذاتية + تدقيق آلي + شخص آخر إن أمكن',
+    'روابط LinkedIn وPortfolio تعمل في نافذة خاصة',
+    'مصطلحات الإعلان ذات الصلة فقط موجودة ومثبتة',
+    'أي أرقام ونتائج في المشاريع مقاسة ومشروحة وليست مختلقة',
   ];
 
   return (
@@ -483,17 +379,17 @@ export const CareerChecklistSection = () => {
 
       <Alert type="golden" title="الخطوات القادمة">
         <ol className="space-y-2 mt-2 text-sm">
-          <li>1. ✅ CV (هذا الدرس) ← أنت هنا!</li>
-          <li>2. 🔜 LinkedIn (الدرس القادم)</li>
-          <li>3. 🔜 خطة التقديم على الوظائف</li>
-          <li>4. 🔜 أسئلة المقابلات 200+ سؤال</li>
-          <li>5. 🔜 اليوم الأول في الوظيفة</li>
+          <li>1. راجع CV مقابل وظيفة فعلية واحذف كل ادعاء غير مثبت.</li>
+          <li>2. حدّث LinkedIn وPortfolio بنفس الحقائق.</li>
+          <li>3. قدّم 5–8 طلبات موجهة أسبوعيًا وسجّل النتيجة.</li>
+          <li>4. تدرب على السيناريوهات والإنجليزية التقنية بصوت مسموع.</li>
+          <li>5. حسّن أضعف نقطة بناءً على المقابلات والرفض، لا بالتخمين.</li>
         </ol>
       </Alert>
 
       <div className="bg-green-900/20 rounded-xl p-8 border border-green-500/30 text-center">
-        <h2 className="text-2xl font-bold text-green-400 mb-4">🎯 أنت قاب قوسين أو أدنى من التوظيف!</h2>
-        <p className="text-xl text-white">استمر! 💪</p>
+        <h2 className="text-2xl font-bold text-green-400 mb-4">🎯 ملفك جاهز للتجربة في السوق، لا يوجد ضمان للقبول</h2>
+        <p className="text-gray-200">استمر في التقديم والقياس والتحسين مع بناء أدلة أقوى. 💪</p>
       </div>
     </div>
   );

@@ -1,173 +1,77 @@
-
 import Alert from '../components/Alert';
 import Table from '../components/Table';
 import CodeBlock from '../components/CodeBlock';
 
-const HTTPSection: React.FC = () => {
-  return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3">
-        <span>📡</span>
-        الجزء 6: HTTP بعمق
-      </h1>
+const HTTPSection: React.FC = () => (
+  <div className="space-y-10">
+    <header>
+      <h1 className="flex items-center gap-3 text-3xl font-bold text-cyan-400"><span>📡</span>HTTP للمحلل: request، response، وسلسلة الوكلاء</h1>
+      <p className="mt-3 max-w-4xl text-lg leading-8 text-gray-300">اقرأ transaction كاملًا: method + authority/host + path/query + headers + body metadata + status + bytes + timing، ثم اربطه بالهوية والعملية. معظم الويب مشفر، فتتغير الرؤية حسب proxy وTLS inspection والسياسة.</p>
+    </header>
 
-      <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">1. Methods: semantics لا verdict</h2>
+      <Table headers={['Method', 'المعنى المعتاد', 'سؤال التحقيق']} rows={[
+        ['GET / HEAD', 'استرجاع representation / headers', 'ما path/query/cache/status/bytes؟ GET قد يحمل بيانات في query.'],
+        ['POST', 'إرسال representation لمعالجة', 'أي content type/endpoint/user/result؟ شائع جدًا شرعيًا.'],
+        ['PUT / PATCH', 'إنشاء/استبدال أو تعديل resource', 'هل API يدعمه وهل principal مخول؟'],
+        ['DELETE', 'طلب حذف resource', 'status وحده لا يثبت الحذف؛ راجع application audit/state.'],
+        ['OPTIONS', 'إمكانات endpoint وCORS preflight', 'طبيعي للمتصفح؛ volume/paths/source تحدد enumeration hypothesis.'],
+        ['CONNECT', 'إنشاء tunnel عبر proxy', 'هل destination/user/policy متوقع؟ داخل tunnel لا يرى proxy العادي المحتوى.'],
+      ]} />
+    </section>
 
-      {/* HTTP Methods */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-          <span className="text-cyan-500">6.1</span>
-          HTTP Methods
-        </h2>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">2. Status codes: نتيجة HTTP لا نتيجة أمنية</h2>
+      <Table headers={['الفئة', 'تعني', 'تحذير SOC']} rows={[
+        ['1xx', 'استجابة معلوماتية/interim', '101 قد يبدّل البروتوكول مثل WebSocket.'],
+        ['2xx', 'الخادم عالج الطلب وفق semantics', '200 لا يثبت web shell أو نجاح exploit؛ افحص body/app audit/effect.'],
+        ['3xx', 'redirect أو cache semantics', 'اتبع Location بأداة معزولة فقط؛ redirect chain قد يخفي وجهة.'],
+        ['4xx', 'الطلب لم ينجح وفق client-facing semantics', '401/403/404 volume قد يدعم guessing/scanning مع source/rate/paths.'],
+        ['5xx', 'الخادم/الوسيط أخفق في الطلب', 'قد يكون bug/load/dependency؛ لا يثبت exploit attempt.'],
+      ]} />
+    </section>
 
-        <Table
-          headers={['Method', 'الاستخدام', 'علامة مشبوهة']}
-          rows={[
-            ['GET', 'جلب صفحة', 'GET كبير جداً، parameters غريبة'],
-            ['POST', 'إرسال بيانات', 'POST لـ endpoint غير معروف'],
-            ['PUT', 'رفع ملف', 'نادر، يستحق التحقيق'],
-            ['DELETE', 'حذف', 'نادر، يستحق التحقيق'],
-            ['OPTIONS', 'استكشاف', 'كثرتها = enumeration'],
-            ['CONNECT', 'tunnel', 'يستخدم في proxies'],
-          ]}
-        />
-      </section>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">3. Headers وحدود الثقة</h2>
+      <Table headers={['Header/field', 'يفيد في', 'قيد']} rows={[
+        ['Host / :authority', 'virtual host والهدف المطلوب', 'قيمة يرسلها client؛ تحقق من proxy/server routing.'],
+        ['User-Agent', 'client claim وbaseline', 'قابل للتزييف؛ sqlmap/curl string لا يثبت الأداة.'],
+        ['Authorization / Cookie', 'نوع auth/session context', 'أسرار؛ لا تضع القيمة الخام في ticket/Git.'],
+        ['Referer / Origin', 'navigation وbrowser origin context', 'قد يغيب أو يُقيد أو يزيّف؛ spelling القياسي Referer.'],
+        ['X-Forwarded-For / Forwarded', 'سلسلة IP عبر proxy موثوق', 'لا تثق بمدخل client؛ ابدأ من proxy موثوق وسياسة append.'],
+        ['Content-Type / Length', 'صيغة وحجم معلنين', 'قد لا يطابق المحتوى الفعلي؛ افحص parser/result ضمن الصلاحية.'],
+        ['Request/trace ID', 'ربط proxy/app/backend', 'تأكد من propagation وuniqueness/retention.'],
+      ]} />
+      <Alert type="danger">URLs وheaders قد تحوي tokens وPII. اعرض names/lengths أو قيمًا منقحة، واحفظ الأصل وفق access/TLP/retention.</Alert>
+    </section>
 
-      {/* HTTP Status Codes */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-          <span className="text-cyan-500">6.2</span>
-          HTTP Status Codes (مرجع كامل)
-        </h2>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">4. HTTP/1.1 و2 و3 والرؤية</h2>
+      <ul className="space-y-2 text-sm leading-7 text-gray-300">
+        <li>• HTTP/1.1 نصي على cleartext؛ keep-alive يسمح معاملات متعددة في connection.</li>
+        <li>• HTTP/2 binary ومmultiplexed streams داخل TCP/TLS؛ packet order ليس transaction order.</li>
+        <li>• HTTP/3 يعمل فوق QUIC/UDP؛ TCP filters لن تراه، وغالبًا payload مشفر.</li>
+        <li>• TLS inspection إن وُجد يغير trust/privacy وقد لا يغطي pinned apps؛ وثق نقطة الرؤية ولا تفترض decryption.</li>
+      </ul>
+    </section>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* 1xx */}
-          <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-            <h3 className="text-lg font-bold text-gray-400 mb-3">1xx – معلوماتية</h3>
-            <ul className="space-y-1 text-sm text-gray-300">
-              <li>100 Continue</li>
-              <li>101 Switching Protocols</li>
-            </ul>
-          </div>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">5. فحص آمن بـcurl</h2>
+      <CodeBlock code={`# استخدم نطاق التوثيق فقط، وحدد الوقت وأظهر الأخطاء
+curl --fail-with-body --show-error --head https://example.com/
+curl --show-error --verbose --max-time 15 https://example.com/ -o /dev/null
+curl --show-error --location --max-redirs 3 --max-time 15 https://example.com/ -o /dev/null
 
-          {/* 2xx */}
-          <div className="bg-green-900/20 rounded-xl p-4 border border-green-500/30">
-            <h3 className="text-lg font-bold text-green-400 mb-3">2xx – نجاح ✅</h3>
-            <ul className="space-y-1 text-sm text-gray-300">
-              <li><strong>200 OK</strong> ✅</li>
-              <li>201 Created</li>
-              <li>204 No Content</li>
-            </ul>
-          </div>
-
-          {/* 3xx */}
-          <div className="bg-blue-900/20 rounded-xl p-4 border border-blue-500/30">
-            <h3 className="text-lg font-bold text-blue-400 mb-3">3xx – Redirect</h3>
-            <ul className="space-y-1 text-sm text-gray-300">
-              <li>301 Moved Permanently</li>
-              <li><strong>302 Found</strong> (redirect)</li>
-              <li>304 Not Modified (cache)</li>
-            </ul>
-          </div>
-
-          {/* 4xx */}
-          <div className="bg-yellow-900/20 rounded-xl p-4 border border-yellow-500/30">
-            <h3 className="text-lg font-bold text-yellow-400 mb-3">4xx – خطأ من العميل</h3>
-            <ul className="space-y-1 text-sm text-gray-300">
-              <li><strong>400</strong> Bad Request</li>
-              <li><strong>401</strong> Unauthorized (يحتاج auth)</li>
-              <li><strong>403</strong> Forbidden (ممنوع)</li>
-              <li><strong>404</strong> Not Found</li>
-              <li>405 Method Not Allowed</li>
-              <li>429 Too Many Requests</li>
-            </ul>
-          </div>
-
-          {/* 5xx */}
-          <div className="bg-red-900/20 rounded-xl p-4 border border-red-500/30">
-            <h3 className="text-lg font-bold text-red-400 mb-3">5xx – خطأ من السيرفر</h3>
-            <ul className="space-y-1 text-sm text-gray-300">
-              <li><strong>500</strong> Internal Server Error</li>
-              <li>502 Bad Gateway</li>
-              <li>503 Service Unavailable</li>
-              <li>504 Gateway Timeout</li>
-            </ul>
-          </div>
-
-          {/* Security Reading */}
-          <div className="bg-purple-900/20 rounded-xl p-4 border border-purple-500/30">
-            <h3 className="text-lg font-bold text-purple-400 mb-3">🔍 القراءة الأمنية</h3>
-            <ul className="space-y-1 text-sm text-gray-300">
-              <li><strong>كثير 401/403</strong> = brute force</li>
-              <li><strong>كثير 404</strong> = scanning</li>
-              <li><strong>كثير 500</strong> = exploit attempt</li>
-              <li><strong>200 لـ endpoints غريبة</strong> = web shell</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      {/* HTTP Headers */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-          <span className="text-cyan-500">6.3</span>
-          HTTP Headers المهمة للمحلل
-        </h2>
-
-        <Table
-          headers={['Header', 'المعنى', 'استخدامه الأمني']}
-          rows={[
-            ['Host', 'اسم الموقع', 'تحديد target'],
-            ['User-Agent', 'المتصفح/الأداة', 'كشف الأدوات (curl, python, sqlmap)'],
-            ['Referer', 'من وين جاي', 'تتبع المصدر'],
-            ['Cookie', 'جلسة', 'كشف session hijacking'],
-            ['Authorization', 'اعتماد', 'basic auth, bearer tokens'],
-            ['X-Forwarded-For', 'الـ IP الأصلي خلف proxy', 'تتبع المهاجم'],
-            ['Content-Type', 'نوع البيانات', 'كشف uploads مشبوهة'],
-          ]}
-        />
-
-        <Alert type="danger" title="User-Agents مشبوهة">
-          <CodeBlock
-            code={`sqlmap/1.x
-Nikto/2.x
-Mozilla/5.0 (compatible; Nmap Scripting Engine)
-python-requests/2.x
-curl/7.x (من جهاز مستخدم عادي مشبوه)`}
-          />
-        </Alert>
-      </section>
-
-      {/* curl Examples */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-          <span className="text-cyan-500">6.4</span>
-          تحليل HTTP بـ curl (عملي)
-        </h2>
-
-        <CodeBlock
-          title="أوامر curl للتحليل"
-          code={`# جلب headers فقط
-curl -I https://example.com
-
-# جلب الصفحة كاملة مع headers
-curl -v https://example.com
-
-# تحديد User-Agent
-curl -A "Mozilla/5.0" https://example.com
-
-# POST request
-curl -X POST -d "user=admin&pass=123" https://example.com/login
-
-# اتباع الـ redirects
-curl -L https://example.com
-
-# تحديد header
-curl -H "Authorization: Bearer xyz" https://api.example.com`}
-        />
-      </section>
-    </div>
-  );
-};
+# لا تضع token حقيقيًا في history. استخدم fixture محليًا عند تدريب POST:
+printf '%s\\n' 'user=lab-user&value=synthetic' > request-fixture.txt
+# لا ترسل fixture إلا إلى خادم مختبر تملكه.`} />
+      <CodeBlock title="ملاحظة تحقيق" language="text" code={`UTC/source log/request ID | client/proxy/backend chain | user/process/host
+method + normalized host/path (query secret removed) | status | bytes | duration
+TLS/protocol/version | response/app outcome | baseline/change
+facts | hypotheses | scope | confidence | visibility gaps | next authorized query`} />
+    </section>
+  </div>
+);
 
 export default HTTPSection;

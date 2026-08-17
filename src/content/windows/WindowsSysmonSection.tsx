@@ -1,147 +1,56 @@
 import Alert from '../../components/Alert';
+import Table from '../../components/Table';
 import CodeBlock from '../../components/CodeBlock';
 
-const WindowsSysmonSection = () => {
-  return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3">
-        <span>🔬</span>
-        Sysmon بعمق
-      </h1>
+const WindowsSysmonSection = () => (
+  <div className="space-y-10">
+    <h1 className="flex items-center gap-3 text-3xl font-bold text-cyan-400"><span>👁️</span>Sysmon: telemetry غنية مشروطة بالتهيئة</h1>
+    <Alert type="warning">Sysmon خدمة/driver يسجل أحداثًا في Windows Event Log؛ ليس EDR كاملًا ولا يمنع الهجوم. coverage تحددها نسخة Sysmon وconfig والفلاتر وحالة الخدمة والاحتفاظ.</Alert>
 
-      <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">أحداث عالية القيمة — لا تحفظ الرقم بلا config</h2>
+      <Table headers={['ID', 'Observation محتملة', 'ربط وحدود']} rows={[
+        ['1 ProcessCreate', 'image/command/parent/user/hashes/ProcessGuid', 'command may expose secrets؛ creation لا يثبت success أو intent.'],
+        ['3 NetworkConnect', 'TCP/UDP connection مرتبطة بـprocess عندما تكون مفعلة', 'disabled/noisy شائعًا؛ لا يرى content وsource may be proxy/NAT.'],
+        ['5 ProcessTerminate', 'انتهاء process', 'قد يساعد duration؛ غيابه لا يثبت بقاء process.'],
+        ['7 ImageLoad', 'DLL/image loaded', 'غالبًا عالي الحجم ويحتاج filters؛ load لا يثبت exploitation.'],
+        ['8 CreateRemoteThread', 'thread created in another process', 'قد يكون security/accessibility software؛ يحتاج process/tree/signer/memory context.'],
+        ['10 ProcessAccess', 'عملية فتحت أخرى بحقوق معينة', 'noisy وconfig-sensitive؛ LSASS access hypothesis لا verdict.'],
+        ['11 FileCreate', 'ملف أُنشئ/استبدل وفق semantics', 'اربط hash/path/origin/execution؛ extension لا يثبت النوع.'],
+        ['12–14 Registry', 'create/delete/value/rename حسب الحدث', 'baseline/owner/change + persistence outcome.'],
+        ['17–18 Pipe', 'named pipe create/connect', 'names يمكن أن تتشاركها برامج حميدة؛ اربط الطرفين.'],
+        ['22 DNSQuery', 'query مرتبطة بـprocess', 'cache/DoH/other resolver/filters قد تخلق gaps؛ query لا يثبت connection.'],
+        ['23/26 FileDelete', 'حذف archived/non-archived حسب config/version', 'احمِ archive وراجع disk impact/privacy.'],
+        ['25 ProcessTampering', 'أنواع tampering يكتشفها Sysmon', 'ليس كشفًا شاملًا لكل injection؛ تحقق بـEDR/forensics.'],
+      ]} />
+    </section>
 
-      <Alert type="golden" title="ما هو Sysmon؟">
-        System Monitor من Sysinternals (Microsoft) يضيف تفاصيل عميقة جداً عن العمليات والشبكة والملفات.
-        يعطيك قدرة شبه EDR مجانية!
-      </Alert>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">ProcessGuid هو pivot، لا عصا سحرية</h2>
+      <p className="text-sm leading-7 text-gray-300">اربط Event 1→3/7/11/22 باستخدام ProcessGuid عندما يوجد. ParentProcessGuid يشرح ancestry المسجلة. بعد reboot/reinstall/ingestion normalization، أكد Computer/time/record؛ ولا تربط PID وحده عبر زمن طويل لأنه يُعاد استخدامه.</p>
+      <CodeBlock language="powershell" code={`$log='Microsoft-Windows-Sysmon/Operational'
+Get-WinEvent -ListLog $log -ErrorAction SilentlyContinue |
+  Select-Object LogName,IsEnabled,RecordCount,FileSize,MaximumSizeInBytes,LastWriteTime
+Get-Service Sysmon* -ErrorAction SilentlyContinue |
+  Select-Object Name,Status,StartType
+Get-WinEvent -FilterHashtable @{LogName=$log; Id=1; StartTime=(Get-Date).AddHours(-1)} -MaxEvents 20 |
+  Select-Object TimeCreated,Id,RecordId,MachineName,Message`} />
+      <p className="text-xs text-gray-500">Rendered Message مناسب للفحص السريع فقط؛ للتحليل القابل للنقل parse XML Data Name fields.</p>
+    </section>
 
-      {/* التثبيت */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-bold text-white">تثبيت Sysmon</h2>
-
-        <CodeBlock
-          title="التحميل"
-          code={`# من Microsoft
-https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon`}
-        />
-
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="bg-yellow-900/20 rounded-xl p-4 border border-yellow-500/30">
-            <h3 className="text-yellow-400 font-bold mb-3">❌ تثبيت افتراضي (غير مستحسن)</h3>
-            <CodeBlock code={`sysmon -i -accepteula`} />
-          </div>
-
-          <div className="bg-green-900/20 rounded-xl p-4 border border-green-500/30">
-            <h3 className="text-green-400 font-bold mb-3">✅ تثبيت بإعدادات احترافية</h3>
-            <CodeBlock code={`# استخدم إعدادات SwiftOnSecurity
-sysmon -i sysmonconfig-export.xml -accepteula`} />
-          </div>
-        </div>
-
-        <Alert type="info">
-          إعدادات موصى بها:
-          <br />• <strong>SwiftOnSecurity:</strong> github.com/SwiftOnSecurity/sysmon-config
-          <br />• <strong>Olaf Hartong (الأشمل):</strong> github.com/olafhartong/sysmon-modular
-        </Alert>
-      </section>
-
-      {/* Event IDs */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">🔢 Sysmon Event IDs الكاملة</h2>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-800">
-                <th className="px-4 py-2 text-right text-cyan-400">ID</th>
-                <th className="px-4 py-2 text-right text-cyan-400">الحدث</th>
-                <th className="px-4 py-2 text-right text-cyan-400">الأهمية</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[
-                { id: '1', name: 'Process Create', imp: '⭐⭐⭐', note: 'الأهم - كل عملية جديدة' },
-                { id: '2', name: 'File creation time changed', imp: '⭐', note: 'Timestomping' },
-                { id: '3', name: 'Network connection', imp: '⭐⭐⭐', note: 'كل اتصال شبكي' },
-                { id: '4', name: 'Sysmon service state changed', imp: '⭐⭐', note: 'محاولة إيقاف Sysmon' },
-                { id: '5', name: 'Process terminated', imp: '⭐', note: '' },
-                { id: '6', name: 'Driver loaded', imp: '⭐⭐', note: 'Rootkits' },
-                { id: '7', name: 'Image loaded (DLL)', imp: '⭐⭐', note: 'DLL injection' },
-                { id: '8', name: 'CreateRemoteThread', imp: '⭐⭐⭐', note: 'Process injection' },
-                { id: '10', name: 'ProcessAccess', imp: '⭐⭐⭐', note: 'Credential dumping (Mimikatz)' },
-                { id: '11', name: 'FileCreate', imp: '⭐⭐', note: 'إنشاء ملفات' },
-                { id: '12-14', name: 'Registry Events', imp: '⭐⭐', note: 'Persistence' },
-                { id: '17-18', name: 'Pipe Events', imp: '⭐', note: 'Named pipes' },
-                { id: '19-21', name: 'WMI Events', imp: '⭐⭐', note: 'WMI persistence' },
-                { id: '22', name: 'DNSEvent', imp: '⭐⭐⭐', note: 'DNS queries - C2 detection' },
-                { id: '23', name: 'FileDelete', imp: '⭐', note: '' },
-              ].map((event, index) => (
-                <tr key={index} className="border-b border-gray-800 hover:bg-gray-800/50">
-                  <td className="px-4 py-2 font-mono text-green-400 font-bold">{event.id}</td>
-                  <td className="px-4 py-2 text-white">{event.name}</td>
-                  <td className="px-4 py-2">
-                    <span className="text-yellow-400">{event.imp}</span>
-                    <span className="text-gray-400 text-xs mr-2">{event.note}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* استعلامات مهمة */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">🔍 استعلامات Sysmon المهمة</h2>
-
-        <CodeBlock
-          title="كل العمليات الجديدة"
-          code={`Get-WinEvent -FilterHashtable @{
-  LogName='Microsoft-Windows-Sysmon/Operational'
-  Id=1
-} -MaxEvents 100`}
-        />
-
-        <CodeBlock
-          title="اتصالات شبكية لـ powershell.exe"
-          code={`Get-WinEvent -FilterHashtable @{
-  LogName='Microsoft-Windows-Sysmon/Operational'
-  Id=3
-} | Where-Object { $_.Message -match "powershell" }`}
-        />
-
-        <CodeBlock
-          title="عمليات من Office (Macro malware)"
-          code={`Get-WinEvent -FilterHashtable @{
-  LogName='Microsoft-Windows-Sysmon/Operational'
-  Id=1
-} | Where-Object {
-  $_.Message -match "ParentImage:.*\\\\(WINWORD|EXCEL|POWERPNT|OUTLOOK)\\.EXE"
-}`}
-        />
-
-        <CodeBlock
-          title="استعلامات DNS"
-          code={`Get-WinEvent -FilterHashtable @{
-  LogName='Microsoft-Windows-Sysmon/Operational'
-  Id=22
-} | Select-Object TimeCreated, @{
-  Name='Query'
-  Expression={ if ($_.Message -match "QueryName: (.+)") { $matches[1] } }
-}`}
-        />
-
-        <CodeBlock
-          title="ProcessAccess على lsass (Credential Dumping)"
-          code={`Get-WinEvent -FilterHashtable @{
-  LogName='Microsoft-Windows-Sysmon/Operational'
-  Id=10
-} | Where-Object { $_.Message -match "TargetImage:.*lsass\\.exe" }`}
-        />
-      </section>
-    </div>
-  );
-};
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">هندسة config آمنة</h2>
+      <ol className="space-y-2 text-sm leading-7 text-gray-300">
+        <li>1. ابدأ use cases وrequired fields قبل include/exclude.</li>
+        <li>2. اختبر config في canary؛ تحقق syntax/schema/version من المصدر الرسمي.</li>
+        <li>3. قِس EPS/day وdrop/CPU/storage قبل وبعد، لا تقل «noise أقل» دون رقم.</li>
+        <li>4. اختبر expected event بأداة حميدة، ثم negative/false-positive cases.</li>
+        <li>5. peer review + version control + owner + rollback + signed change.</li>
+        <li>6. راقب service/config change وchannel retention وforwarding health.</li>
+      </ol>
+      <Alert type="danger">استثناء مجلد واسع أو tools الموقعة قد يصنع blind spot. لا تعرض command lines الحقيقية في Portfolio؛ استخدم synthetic fixture/redaction.</Alert>
+    </section>
+  </div>
+);
 
 export default WindowsSysmonSection;

@@ -1,153 +1,69 @@
-
 import Alert from '../components/Alert';
+import Table from '../components/Table';
 import CodeBlock from '../components/CodeBlock';
 
-const WindowsSection: React.FC = () => {
-  return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3">
-        <span>🪟</span>
-        الجزء 7: SMB, RDP, Kerberos
-      </h1>
-      <p className="text-gray-400">مهمين جداً للمحلل</p>
+const WindowsSection: React.FC = () => (
+  <div className="space-y-10">
+    <header>
+      <h1 className="flex items-center gap-3 text-3xl font-bold text-cyan-400"><span>🪟</span>SMB وRDP وKerberos كتحقيق مترابط</h1>
+      <p className="mt-3 max-w-4xl text-lg leading-8 text-gray-300">هذه بروتوكولات تشغيل يومية في Windows/AD ويمكن إساءة استخدامها. لا تحول protocol أو admin share أو ticket request إلى verdict؛ اربط الشبكة بالهوية والـendpoint والـoutcome.</p>
+    </header>
 
-      <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">1. SMB — TCP/445 شائعًا</h2>
+      <Table headers={['ما تراه', 'سؤال التحقيق', 'دليل مكمل']} rows={[
+        ['Session/authentication', 'من الحساب ومن المصدر وإلى أي server؟', '4624 type 3، 4625، NTLM/Kerberos، LogonId.'],
+        ['Tree connect إلى share', 'share عادي أم C$/ADMIN$/IPC$؟ هل الدور يسمح؟', '5140/5145 إن كان auditing متاحًا وshare ACL.'],
+        ['File operations', 'أي path/access/result/bytes؟', 'object access/EDR/file hash وowner.'],
+        ['Service/task بعد SMB', 'هل remote administration معتمد؟', '7045/4697/4688/Sysmon/task events/change ticket.'],
+      ]} />
+      <Alert type="warning">Administrative shares شرعية لأدوات الإدارة والنشر. Workstation-to-workstation قد يكون ممنوعًا في بيئة ومعتادًا في أخرى. SMBv1 يرفع مخاطر legacy ويحتاج inventory/change plan، لا وصف كل SMB exploit.</Alert>
+      <CodeBlock code={`smb || smb2
+tcp.port == 445
+# Wireshark protocol fields تعتمد على التشفير/التوقيع والإصدار؛ endpoint/server logs قد تكون أوضح.`} />
+    </section>
 
-      {/* SMB Section */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-          <span className="text-cyan-500">7.1</span>
-          SMB (Server Message Block) – Port 445
-        </h2>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">2. RDP — لا تخلط connection وlogon وsession</h2>
+      <ol className="space-y-2 text-sm leading-7 text-gray-300">
+        <li>1. Network connection إلى TCP/UDP 3389 أو منفذ مخصص لا يثبت authentication.</li>
+        <li>2. Security 4624 LogonType 10 يتوافق مع RemoteInteractive في ذلك الحدث؛ اربطه بـsource/user/LogonId.</li>
+        <li>3. TerminalServices LocalSessionManager/RemoteConnectionManager تضيف session context بحسب القنوات والإعداد.</li>
+        <li>4. VPN/NAT/gateway قد يغيّر source؛ GeoIP لا ينسب شخصًا، ووقت خارج الدوام يعتمد shift/travel/change.</li>
+        <li>5. ابحث عما بعد الدخول: process/file/service/task/network/privilege، لا تقف عند نجاح logon.</li>
+      </ol>
+      <CodeBlock code={`tcp.port == 3389 || udp.port == 3389
+# candidate network view؛ استخدم Windows/VPN/RD Gateway/EDR logs لإثبات النتيجة.`} />
+    </section>
 
-        <div className="bg-red-900/20 rounded-xl p-6 border border-red-500/30">
-          <h3 className="text-lg font-bold text-red-400 mb-4">🚨 ليش مهم؟</h3>
-          <ul className="space-y-2 text-gray-300">
-            <li>• مشاركة الملفات في Windows</li>
-            <li>• <strong>Lateral Movement</strong> الرئيسي للمهاجمين</li>
-            <li>• <strong>EternalBlue (WannaCry)</strong> كان عبر SMB</li>
-          </ul>
-        </div>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">3. Kerberos — افهم exchange قبل أسماء الهجمات</h2>
+      <Table headers={['المرحلة', 'Windows events شائعة', 'المعنى']} rows={[
+        ['AS exchange', '4768/4771 على DC', 'طلب/فشل TGT حسب الحدث والحقول.'],
+        ['TGS exchange', '4769 على DC', 'طلب service ticket؛ شائع جدًا ولا يثبت Kerberoasting.'],
+        ['Service logon', '4624 على target غالبًا', 'استخدام ناتج للمصادقة في سياق target.'],
+        ['Credential validation/NTLM', '4776 وغيرها', 'مسار مختلف؛ افحص package/source/result.'],
+      ]} />
+      <Table headers={['Hypothesis', 'Features ترفعها', 'ما يلزم']} rows={[
+        ['Kerberoasting-like', 'حساب يطلب SPNs كثيرة/غير معتادة وأنواع تشفير legacy', 'baseline، requester host/process، service ownership، outcome offline غير مرئي غالبًا.'],
+        ['AS-REP roasting-like', 'طلب لحساب بلا pre-auth وفق config/event', 'تأكيد account setting والrequester؛ الطلب لا يثبت crack.'],
+        ['Forged ticket suspicion', 'ticket/account/domain anomalies أو access بلا chain متوقع', 'DC/service logs وkeys/config/time؛ قد تكون telemetry ناقصة.'],
+        ['Password spray', 'failures موزعة على حسابات من source/infra', 'window، distinct users، reasons، success، VPN/IdP context.'],
+      ]} />
+      <Alert type="info">RC4 قد يظهر لأسباب compatibility ولا يثبت هجومًا، لكنه يستحق inventory وخطة تقليل وفق دعم الأنظمة. Lifetime غير المعتاد يحتاج policy الفعلية وقراءة fields صحيحة.</Alert>
+      <CodeBlock code={`kerberos
+tcp.port == 88 || udp.port == 88
+# packet capture قد لا يعطي endpoint process أو كامل سياق AD؛ اربطه بأحداث DC والهدف.`} />
+    </section>
 
-        <Alert type="danger" title="علامات مشبوهة في SMB">
-          <ul className="space-y-2">
-            <li>• SMB connections بين أجهزة مستخدمين (workstation to workstation)</li>
-            <li>• SMB لمشاركات إدارية: <code className="bg-gray-700 px-2 py-1 rounded text-red-400">C$</code>, <code className="bg-gray-700 px-2 py-1 rounded text-red-400">ADMIN$</code>, <code className="bg-gray-700 px-2 py-1 rounded text-red-400">IPC$</code></li>
-            <li>• استخدام SMBv1 (قديم وخطير)</li>
-          </ul>
-        </Alert>
-
-        <CodeBlock
-          title="Wireshark filters للـ SMB"
-          code={`smb
-smb2`}
-        />
-      </section>
-
-      {/* RDP Section */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-          <span className="text-cyan-500">7.2</span>
-          RDP (Remote Desktop) – Port 3389
-        </h2>
-
-        <div className="bg-orange-900/20 rounded-xl p-6 border border-orange-500/30">
-          <h3 className="text-lg font-bold text-orange-400 mb-4">⚠️ ليش مهم؟</h3>
-          <ul className="space-y-2 text-gray-300">
-            <li>• <strong>أكثر vector للهجوم على الشركات</strong></li>
-            <li>• Brute force دائم</li>
-            <li>• Ransomware groups يدخلون عبر RDP</li>
-          </ul>
-        </div>
-
-        <Alert type="danger" title="علامات مشبوهة في RDP">
-          <ul className="space-y-2">
-            <li>• RDP من <strong>IPs خارجية</strong> غريبة</li>
-            <li>• محاولات brute force (كثير اتصالات فاشلة)</li>
-            <li>• RDP في <strong>أوقات غير عمل</strong></li>
-            <li>• RDP من <strong>بلدان غير معتادة</strong></li>
-          </ul>
-        </Alert>
-
-        <CodeBlock
-          title="Wireshark filter للـ RDP"
-          code={`tcp.port == 3389`}
-        />
-      </section>
-
-      {/* Kerberos Section */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-          <span className="text-cyan-500">7.3</span>
-          Kerberos – Ports 88, 464
-        </h2>
-
-        <div className="bg-purple-900/20 rounded-xl p-6 border border-purple-500/30">
-          <h3 className="text-lg font-bold text-purple-400 mb-4">🔐 ليش مهم؟</h3>
-          <ul className="space-y-2 text-gray-300">
-            <li>• نظام المصادقة في Active Directory</li>
-            <li className="mt-4"><strong>هجمات شهيرة:</strong></li>
-            <ul className="mr-4 space-y-1">
-              <li>- <strong>Kerberoasting</strong> (سرقة service tickets)</li>
-              <li>- <strong>Golden Ticket</strong> (تزوير TGT)</li>
-              <li>- <strong>Silver Ticket</strong> (تزوير service tickets)</li>
-              <li>- <strong>AS-REP Roasting</strong></li>
-            </ul>
-          </ul>
-        </div>
-
-        <Alert type="warning" title="علامات مشبوهة في Kerberos">
-          <ul className="space-y-2">
-            <li>• كثرة طلبات tickets من جهاز واحد</li>
-            <li>• Tickets بمدة صلاحية غير طبيعية</li>
-            <li>• Encryption ضعيف (RC4 بدل AES)</li>
-          </ul>
-        </Alert>
-
-        <CodeBlock
-          title="Wireshark filter للـ Kerberos"
-          code={`kerberos`}
-        />
-      </section>
-
-      {/* Visual Summary */}
-      <section className="mt-12">
-        <h2 className="text-2xl font-bold text-white mb-6">📊 ملخص مرئي</h2>
-        
-        <div className="grid md:grid-cols-3 gap-4">
-          <div className="bg-gradient-to-b from-red-900/30 to-transparent rounded-xl p-6 border border-red-500/30 text-center">
-            <div className="text-4xl mb-4">📁</div>
-            <h3 className="text-xl font-bold text-red-400 mb-2">SMB</h3>
-            <p className="text-2xl font-mono text-white mb-2">445</p>
-            <p className="text-gray-400 text-sm">ملفات + Lateral Movement</p>
-            <div className="mt-4 p-2 bg-red-900/50 rounded text-xs text-red-300">
-              C$, ADMIN$, IPC$
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-b from-orange-900/30 to-transparent rounded-xl p-6 border border-orange-500/30 text-center">
-            <div className="text-4xl mb-4">🖥️</div>
-            <h3 className="text-xl font-bold text-orange-400 mb-2">RDP</h3>
-            <p className="text-2xl font-mono text-white mb-2">3389</p>
-            <p className="text-gray-400 text-sm">Remote Desktop</p>
-            <div className="mt-4 p-2 bg-orange-900/50 rounded text-xs text-orange-300">
-              Brute Force Target #1
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-b from-purple-900/30 to-transparent rounded-xl p-6 border border-purple-500/30 text-center">
-            <div className="text-4xl mb-4">🎟️</div>
-            <h3 className="text-xl font-bold text-purple-400 mb-2">Kerberos</h3>
-            <p className="text-2xl font-mono text-white mb-2">88</p>
-            <p className="text-gray-400 text-sm">AD Authentication</p>
-            <div className="mt-4 p-2 bg-purple-900/50 rounded text-xs text-purple-300">
-              Golden/Silver Tickets
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-};
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">4. Timeline موحد</h2>
+      <CodeBlock language="text" code={`UTC | source host/IP/process/user | destination/DC/server
+DNS/connection ID | Kerberos request/result | SMB/RDP session/result
+Share/file/service/task/process effects | asset/change context
+Scope/prevalence | competing hypotheses | confidence/gaps | authorized next step`} />
+    </section>
+  </div>
+);
 
 export default WindowsSection;

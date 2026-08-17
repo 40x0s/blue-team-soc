@@ -1,143 +1,65 @@
 import Alert from '../../components/Alert';
 import CodeBlock from '../../components/CodeBlock';
+import Table from '../../components/Table';
 
-const WindowsEventViewerSection = () => {
-  return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3">
-        <span>👁️</span>
-        Event Viewer للمحلل
-      </h1>
+const WindowsEventViewerSection = () => (
+  <div className="space-y-10">
+    <h1 className="flex items-center gap-3 text-3xl font-bold text-cyan-400"><span>🔎</span>Event Viewer وWEVTUTIL: فحص دون إتلاف</h1>
 
-      <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">GUI workflow</h2>
+      <ol className="space-y-2 text-sm leading-7 text-gray-300">
+        <li>1. سجّل host/timezone/case/window قبل فتح السجل.</li>
+        <li>2. انتقل إلى Windows Logs أو Applications and Services Logs واختر channel الصحيح.</li>
+        <li>3. Filter Current Log بالوقت/provider/IDs/keywords؛ Event Level ليس «درجة خطورة SOC».</li>
+        <li>4. افتح Details → XML View وافحص System/EventData بالأسماء.</li>
+        <li>5. Save Filtered Log File كـEVTX عند التفويض، hash الأصل، واعمل على نسخة.</li>
+      </ol>
+      <Alert type="warning">Attach Task to This Event ليس automation production آمنًا: حدث مفرد قد يكون noisy ويمكنه تشغيل إجراء دون dedup/rate limit/approval/rollback. استخدم SIEM/SOAR governance واختبر detection أولًا.</Alert>
+    </section>
 
-      {/* فتح Event Viewer */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-bold text-white">فتح Event Viewer</h2>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">Custom View XML</h2>
+      <CodeBlock language="xml" code={`<QueryList>
+  <Query Id="0" Path="Security">
+    <Select Path="Security">
+      *[System[(EventID=4624 or EventID=4625) and TimeCreated[timediff(@SystemTime) &lt;= 3600000]]]
+    </Select>
+  </Query>
+</QueryList>`} />
+      <p className="text-sm text-gray-400">Window ساعة نسبةً لوقت التشغيل. لا تفترض أن filter يساوي كل evidence: قد يكون log overwritten أو policy غير مفعلة أو event على جهاز آخر.</p>
+    </section>
 
-        <CodeBlock code={`eventvwr.msc`} />
-        <p className="text-gray-400">أو من Start menu ابحث عن "Event Viewer"</p>
-      </section>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">CLI صالح للتكرار</h2>
+      <CodeBlock language="powershell" code={`# Metadata أولًا
+wevtutil gli Security
+wevtutil gl Security
 
-      {/* التنقل الذكي */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">📍 التنقل الذكي</h2>
+# آخر 20 حدثًا (العرض reverse)
+wevtutil qe Security /c:20 /rd:true /f:RenderedXml
 
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-            <h3 className="text-cyan-400 font-bold mb-3">Windows Logs</h3>
-            <p className="text-gray-400 text-sm">السجلات الكلاسيكية الثلاثة (Security, System, Application)</p>
-          </div>
+# Query محددة؛ الاقتباس قد يختلف بين shells
+wevtutil qe Security /q:"*[System[(EventID=4624 or EventID=4625)]]" /c:50 /rd:true /f:xml
 
-          <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-            <h3 className="text-cyan-400 font-bold mb-3">Applications and Services Logs</h3>
-            <p className="text-gray-400 text-sm">السجلات المتخصصة (PowerShell, Sysmon, etc.)</p>
-          </div>
+# Export غير تدميري
+wevtutil epl Security C:\\SOC-Lab\\Security.evtx /ow:true
+Get-FileHash C:\\SOC-Lab\\Security.evtx -Algorithm SHA256`} />
+      <Alert type="danger">لا تستخدم <code>wevtutil cl</code> أو Clear Log في مختبر مشترك/بيئة عمل. التصدير لا يمنحك حق نسخ بيانات حساسة إلى جهاز شخصي.</Alert>
+    </section>
 
-          <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-            <h3 className="text-cyan-400 font-bold mb-3">Custom Views</h3>
-            <p className="text-gray-400 text-sm">Views مخصصة يمكنك إنشاؤها</p>
-          </div>
-
-          <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-            <h3 className="text-cyan-400 font-bold mb-3">Subscriptions</h3>
-            <p className="text-gray-400 text-sm">لجمع السجلات من أجهزة أخرى (WEF)</p>
-          </div>
-        </div>
-      </section>
-
-      {/* إنشاء Custom View */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">🛠️ إنشاء Custom View للمحلل</h2>
-
-        <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-          <h3 className="text-cyan-400 font-bold mb-4">الخطوات:</h3>
-          <ol className="space-y-2 text-gray-300 list-decimal list-inside">
-            <li>Right click على Custom Views → Create Custom View</li>
-            <li>حدد الفترة الزمنية (Logged)</li>
-            <li>حدد مستوى الخطورة (Event level)</li>
-            <li>اختر السجل (By log) مثل Security</li>
-            <li>أدخل Event IDs (مثلاً: 4624,4625,4672,4688)</li>
-            <li>احفظ View باسم واضح</li>
-          </ol>
-        </div>
-
-        <div className="bg-green-900/20 rounded-xl p-6 border border-green-500/30">
-          <h3 className="text-green-400 font-bold mb-4">💡 Views مفيدة للمحلل</h3>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="bg-gray-800/50 rounded p-3">
-              <p className="text-cyan-400 font-bold text-sm">المراقبة العامة</p>
-              <code className="text-gray-400 text-xs">4624,4625,4634,4672,4688</code>
-            </div>
-            <div className="bg-gray-800/50 rounded p-3">
-              <p className="text-cyan-400 font-bold text-sm">الحسابات</p>
-              <code className="text-gray-400 text-xs">4720,4722,4725,4726,4728,4732,4756</code>
-            </div>
-            <div className="bg-gray-800/50 rounded p-3">
-              <p className="text-cyan-400 font-bold text-sm">الأخطار</p>
-              <code className="text-gray-400 text-xs">1102,4719,4720,4732,4624</code>
-            </div>
-            <div className="bg-gray-800/50 rounded p-3">
-              <p className="text-cyan-400 font-bold text-sm">PowerShell</p>
-              <code className="text-gray-400 text-xs">4103,4104</code>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* قراءة Event */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">📖 قراءة Event بشكل احترافي</h2>
-
-        <Alert type="info">
-          عندما تفتح حدث، انتبه لـ <strong>General tab</strong> (الوصف العام) و <strong>Details tab</strong> (التفاصيل الكاملة)
-        </Alert>
-
-        <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-          <h3 className="text-cyan-400 font-bold mb-4">الحقول المهمة في حدث Logon (4624/4625)</h3>
-          
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="text-purple-400 font-bold mb-2">Subject</h4>
-              <ul className="text-gray-400 text-sm space-y-1">
-                <li>• Security ID</li>
-                <li>• Account Name</li>
-                <li>• Account Domain</li>
-                <li>• Logon ID</li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="text-purple-400 font-bold mb-2">New Logon</h4>
-              <ul className="text-gray-400 text-sm space-y-1">
-                <li>• Security ID</li>
-                <li>• Account Name ⭐</li>
-                <li>• Account Domain</li>
-                <li>• Logon ID</li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="text-purple-400 font-bold mb-2">Network Information</h4>
-              <ul className="text-gray-400 text-sm space-y-1">
-                <li>• Workstation Name</li>
-                <li>• Source Network Address ⭐</li>
-                <li>• Source Port</li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="text-purple-400 font-bold mb-2">Logon Information</h4>
-              <ul className="text-gray-400 text-sm space-y-1">
-                <li>• Logon Type ⭐</li>
-                <li>• Elevated Token</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-};
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">قراءة XML</h2>
+      <Table headers={['Element', 'استخدامه']} rows={[
+        ['System/Provider + EventID + Version', 'اختيار schema الصحيح.'],
+        ['TimeCreated SystemTime', 'UTC عادة في XML؛ وحّد timeline ولا تخلط display local time.'],
+        ['Computer + Channel + EventRecordID', 'provenance وترتيب داخل channel، لا global unique ID.'],
+        ['Execution ProcessID/ThreadID', 'provider execution metadata؛ ليس دائمًا process المتهم.'],
+        ['EventData/Data Name', 'fields الدلالية؛ افحص null/“-” وschema version.'],
+        ['Correlation/ActivityID', 'ربط provider workflow عندما يملؤه؛ ليس متاحًا دائمًا.'],
+      ]} />
+    </section>
+  </div>
+);
 
 export default WindowsEventViewerSection;

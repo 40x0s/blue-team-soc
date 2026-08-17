@@ -1,169 +1,76 @@
-
 import Alert from '../components/Alert';
 import Table from '../components/Table';
 import CodeBlock from '../components/CodeBlock';
 
-const TLSSection: React.FC = () => {
-  return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3">
-        <span>🔒</span>
-        الجزء 5: TLS / HTTPS بعمق
-      </h1>
+const TLSSection: React.FC = () => (
+  <div className="space-y-10">
+    <header>
+      <h1 className="flex items-center gap-3 text-3xl font-bold text-cyan-400"><span>🔒</span>TLS/HTTPS: الثقة والرؤية والتحقيق</h1>
+      <p className="mt-3 max-w-4xl text-lg leading-8 text-gray-300">TLS يحمي السرية والسلامة بين طرفين وفق handshake والثقة، لكنه لا يجعل الموقع أو العملية حميدة. ابدأ بنقطة الرؤية: endpoint أم proxy مفك للتشفير أم sensor يرى ciphertext فقط؟</p>
+    </header>
 
-      <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">1. ما قد يظهر على الشبكة</h2>
+      <Table headers={['Artifact', 'قد تراه', 'الحد']} rows={[
+        ['IP/port/flow', 'العنوانان، الحجم، المدة، التوقيت', 'NAT/CDN/shared hosting يخفي attribution والمحتوى.'],
+        ['ClientHello', 'versions/ciphers/extensions/key share وSNI تقليديًا', 'ECH قد يخفي ClientHello الداخلي؛ capture قد يبدأ متأخرًا.'],
+        ['Certificate', 'مرئي في TLS 1.2 full handshake غالبًا', 'رسائل ما بعد ServerHello مشفرة في TLS 1.3، وresumption قد يغير المسار.'],
+        ['JA3/JA4-like feature', 'تجميع خصائص handshake', 'قابل للتغيير/التقليد/التصادم ويتأثر proxy/version.'],
+        ['HTTP data', 'عند endpoint أو proxy مصرح بفك التشفير', 'ciphertext sensor وحده لا يرى path/body/status. QUIC يستخدم UDP.'],
+      ]} />
+      <Alert type="warning">وثّق sensor/version/capture window/decryption policy. عبارة «لم يظهر SNI أو certificate» قد تعني ECH أو TLS 1.3 أو resumption أو capture gap، لا غياب الاتصال.</Alert>
+    </section>
 
-      {/* Why TLS is hard */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-          <span className="text-cyan-500">5.1</span>
-          ليش TLS صعب على SOC؟
-        </h2>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">2. TLS 1.3 full certificate handshake مبسط</h2>
+      <ol className="space-y-3 text-sm leading-7 text-gray-300">
+        <li><strong>1. ClientHello:</strong> يعرض capabilities وkey share وقد يحمل SNI الخارجي.</li>
+        <li><strong>2. ServerHello:</strong> يختار parameters وkey share؛ تُشتق handshake keys.</li>
+        <li><strong>3. EncryptedExtensions + Certificate + CertificateVerify + Finished:</strong> في certificate-authenticated full handshake يثبت الخادم امتلاك مفتاح الشهادة، ويتحقق العميل من chain والاسم والوقت والسياسة. PSK resumption ومسارات أخرى تختلف.</li>
+        <li><strong>4. Client Finished:</strong> يثبت امتلاك handshake secrets وسلامة transcript؛ لا يثبت هوية بشرية. mTLS يضيف client certificate/authentication.</li>
+        <li><strong>5. Application Data:</strong> مشفرة ومحمية من التعديل. نجاح TLS لا يثبت نجاح HTTP أو سلامة التطبيق.</li>
+      </ol>
+      <Alert type="info">في TLS 1.2 يختلف ترتيب الرسائل وما يكون ظاهرًا. 0-RTT في TLS 1.3 له replay considerations ويجب أن يقيّد التطبيق العمليات غير الآمنة؛ لا تستنتج استخدامه بلا evidence.</Alert>
+    </section>
 
-        <Alert type="warning">
-          <p className="text-xl font-bold">TLS يخفي محتوى HTTP عنك.</p>
-          <p className="mt-2">أنت كمحلل لا تشوف ماذا يطلب المستخدم بالضبط.</p>
-        </Alert>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">3. فشل handshake: شخّص ولا «تصلح» بالتخمين</h2>
+      <Table headers={['Hypothesis', 'Evidence مطلوب', 'تصرف آمن']} rows={[
+        ['Expired/not-yet-valid أو clock skew', 'certificate dates + clocks + timezone', 'صحح time source أو جدّد عبر owner؛ لا تتجاوز validation.'],
+        ['Name mismatch', 'requested hostname/SAN/SNI/proxy path', 'صحح DNS/load balancer/certificate mapping بعد change.'],
+        ['Untrusted chain', 'full chain/trust store/AIA/internal CA policy', 'لا تستورد CA مجهولة؛ تحقق من المالك ووزع trust رسميًا.'],
+        ['Version/cipher/signature mismatch', 'ClientHello/ServerHello/alert + endpoint logs', 'قارن policy والدعم؛ لا تعِد weak suites عشوائيًا.'],
+        ['mTLS failure', 'client certificate/issuer/EKU/expiry/access policy', 'تحقق من identity mapping والتجديد، ولا تنسخ private key.'],
+        ['Interception/proxy issue', 'issuer change، proxy logs، bypass policy', 'تحقق من trust boundary والخصوصية والاستثناء المصرح.'],
+      ]} />
+    </section>
 
-        <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-          <h3 className="text-lg font-bold text-green-400 mb-4">✅ لكن تشوف:</h3>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="bg-gray-700/50 rounded-lg p-4">
-              <p className="text-cyan-400 font-bold">SNI</p>
-              <p className="text-gray-300 text-sm">اسم الموقع</p>
-            </div>
-            <div className="bg-gray-700/50 rounded-lg p-4">
-              <p className="text-cyan-400 font-bold">Certificate</p>
-              <p className="text-gray-300 text-sm">الشهادة</p>
-            </div>
-            <div className="bg-gray-700/50 rounded-lg p-4">
-              <p className="text-cyan-400 font-bold">JA3 fingerprint</p>
-              <p className="text-gray-300 text-sm">بصمة العميل</p>
-            </div>
-            <div className="bg-gray-700/50 rounded-lg p-4">
-              <p className="text-cyan-400 font-bold">Sizes & timing</p>
-              <p className="text-gray-300 text-sm">الأحجام والأوقات</p>
-            </div>
-          </div>
-        </div>
-      </section>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">4. C2 over HTTPS: periodicity مرشح لا verdict</h2>
+      <Table headers={['Feature', 'قِس', 'بدائل حميدة']} rows={[
+        ['Intervals', 'count/mean/std/jitter/gaps لكل process-destination', 'updater/health check/NTP-like scheduler.'],
+        ['Bytes/direction', 'distributions والratio والsession duration', 'telemetry/keepalive/API polling.'],
+        ['Destination', 'age/owner/ASN/prevalence/first-seen/policy', 'CDN/new SaaS/shared cloud.'],
+        ['TLS feature', 'version/SNI/ALPN/fingerprint عبر fleet', 'library update/proxy/config collision.'],
+        ['Endpoint context', 'process entity/parent/signer/hash/user/persistence', 'approved agent أو admin tool.'],
+      ]} />
+      <Alert type="danger">لا تسمِّ النمط C2 حتى تختبر scheduler/software inventory وfleet prevalence وتربط process وdestination وoutcome. اكتب unresolved إذا بقيت فجوة telemetry.</Alert>
+    </section>
 
-      {/* TLS Handshake */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-          <span className="text-cyan-500">5.2</span>
-          TLS Handshake
-        </h2>
-
-        <div className="bg-gradient-to-l from-purple-900/30 to-transparent rounded-xl p-6 border border-purple-500/30">
-          <div className="space-y-4">
-            {[
-              { num: 1, direction: '→', text: 'ClientHello', desc: '"أنا أدعم هذه الـ ciphers، وأريد الاتصال بـ SNI=example.com"' },
-              { num: 2, direction: '←', text: 'ServerHello', desc: '"اخترنا هذا الـ cipher، وهذه شهادتي"' },
-              { num: 3, direction: '→', text: 'تحقق + مفتاح', desc: 'تحقق من الشهادة + يولد المفتاح' },
-              { num: 4, direction: '←', text: 'Finished', desc: 'السيرفر يؤكد' },
-              { num: 5, direction: '↔', text: '✅ مشفر', desc: 'القناة مشفرة' },
-            ].map((step) => (
-              <div key={step.num} className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
-                  {step.num}
-                </div>
-                <div className="flex-1 bg-gray-800/50 rounded-lg p-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-purple-400">{step.direction}</span>
-                    <span className="text-white font-bold">{step.text}</span>
-                  </div>
-                  <p className="text-gray-400 text-sm mt-1">{step.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <Table
-          headers={['الحقل', 'الموقع', 'ليش مهم']}
-          rows={[
-            ['SNI', 'ClientHello', 'اسم الموقع الحقيقي'],
-            ['JA3', 'ClientHello', 'بصمة العميل (يكشف malware)'],
-            ['Cipher Suites', 'كلاهما', 'Ciphers ضعيفة = إنذار'],
-            ['Certificate', 'ServerHello', 'Self-signed = مشبوه'],
-            ['TLS Version', 'كلاهما', 'TLS 1.0/1.1 = قديم وضعيف'],
-          ]}
-          highlight={[0, 1]}
-        />
-      </section>
-
-      {/* TLS Failures */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-          <span className="text-cyan-500">5.3</span>
-          أسباب فشل TLS (شائعة في الـ Troubleshooting)
-        </h2>
-
-        <Table
-          headers={['السبب', 'الأعراض', 'الحل']}
-          rows={[
-            ['Certificate expired', '"Your connection is not private"', 'جدد الشهادة'],
-            ['Self-signed', 'تحذير في المتصفح', 'أضف للـ trust store'],
-            ['Clock skew', 'الوقت غلط', 'اضبط NTP'],
-            ['TLS version mismatch', 'فشل handshake', 'حدّث'],
-            ['Cipher mismatch', 'فشل handshake', 'فعّل ciphers جديدة'],
-            ['SNI mismatch', 'شهادة لـ domain ثاني', 'تحقق من الـ DNS'],
-          ]}
-        />
-      </section>
-
-      {/* C2 over HTTPS */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-          <span className="text-cyan-500">5.4</span>
-          الكشف عن C2 over HTTPS
-        </h2>
-
-        <Alert type="danger">
-          المهاجمين الحديثين يستخدمون HTTPS عشان يختبئون. لكن في علامات:
-        </Alert>
-
-        <div className="bg-red-900/20 rounded-xl p-6 border border-red-500/30">
-          <h3 className="text-lg font-bold text-red-400 mb-4">🚨 علامات Beaconing (اتصال دوري بـ C2)</h3>
-          <ul className="space-y-2 text-gray-300">
-            <li>• اتصالات بنفس الـ IP/Domain <strong>كل X دقيقة بانتظام</strong></li>
-            <li>• أحجام packets <strong>ثابتة</strong></li>
-            <li>• في <strong>أوقات غير عمل</strong></li>
-            <li>• إلى Domains <strong>مسجلة حديثاً</strong></li>
-          </ul>
-        </div>
-
-        <div className="bg-purple-900/20 rounded-xl p-6 border border-purple-500/30 mt-4">
-          <h3 className="text-lg font-bold text-purple-400 mb-4">🔍 JA3 Fingerprints</h3>
-          <ul className="space-y-2 text-gray-300">
-            <li>• بصمة TLS من Client side</li>
-            <li>• كل client مكتبة TLS لها JA3 فريدة</li>
-            <li>• <strong>Malware معروف له JA3 معروف</strong></li>
-            <li>• مثال: Cobalt Strike له JA3 معروفة</li>
-          </ul>
-        </div>
-      </section>
-
-      {/* Wireshark Filters */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-          <span className="text-cyan-500">5.5</span>
-          Wireshark filters للـ TLS
-        </h2>
-
-        <CodeBlock
-          title="TLS Wireshark Filters"
-          code={`tls                                    # كل TLS
-tls.handshake                          # handshakes فقط
-tls.handshake.type == 1                # ClientHello
-tls.handshake.type == 2                # ServerHello
-tls.handshake.extensions_server_name contains "google"  # SNI
-tls.alert_message                      # رسائل الأخطاء`}
-        />
-      </section>
-    </div>
-  );
-};
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">5. Filters وتجربة مختبر</h2>
+      <CodeBlock title="Wireshark display filters" code={`tls
+tls.handshake.type == 1
+tls.handshake.type == 2
+tls.handshake.extensions_server_name
+quic || udp.port == 443
+# هذه filters للعرض؛ availability تختلف بالإصدار والتشفير والdissector.`} />
+      <CodeBlock title="فحص endpoint مصرح دون تعطيل certificate verification" code={`curl --show-error --verbose --connect-timeout 5 --max-time 15 https://example.com/ -o /dev/null
+openssl s_client -connect example.com:443 -servername example.com -showcerts </dev/null
+# سجّل الوقت والإصدار والنتيجة. لا تستخدم -k كـ«حل» ولا تختبر هدفًا غير مصرح.`} />
+      <p className="text-sm leading-7 text-gray-400">المخرج: timeline من DNS→transport→TLS، الإصدار/ALPN إن ظهر، chain validation، وما لم تستطع رؤيته. افصل handshake success عن application result.</p>
+    </section>
+  </div>
+);
 
 export default TLSSection;

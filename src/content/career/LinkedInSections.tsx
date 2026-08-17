@@ -8,9 +8,8 @@ export const CareerLinkedInSection = () => (
     <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3"><span>🔗</span>LinkedIn Optimization لـ SOC Analyst</h1>
     <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
 
-    <Alert type="golden" title="لماذا LinkedIn مهم جداً لك؟">
-      <p className="text-xl font-bold">70% من وظائف SOC في السعودية تُملأ عبر LinkedIn.</p>
-      <p className="mt-2">ليس عن طريق إعلانات الوظائف، بل عن طريق: Recruiters يبحثون عنك، HR يفحصون قبل المقابلة، Networking مع أشخاص داخل الشركات، Referrals من موظفين حاليين.</p>
+    <Alert type="golden" title="دور LinkedIn — بلا أرقام مختلقة">
+      <p>LinkedIn قناة مفيدة للبحث والإعلانات والتحقق من الخلفية المهنية وبناء علاقات، لكنه ليس مصدر كل الوظائف ولا يوجد هنا دليل موثوق على نسبة ثابتة في السعودية. استخدمه مع صفحات الشركات ومنصات التوظيف ومركز الجامعة والإحالات، ثم قِس من أين تأتي المشاهدات والردود والمقابلات.</p>
     </Alert>
 
     <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
@@ -24,7 +23,7 @@ export const CareerLinkedInSection = () => (
       <h2 className="text-2xl font-bold text-white">📸 الصورة الشخصية Profile Photo</h2>
       <div className="grid md:grid-cols-2 gap-4">
         <div className="bg-green-900/20 rounded-xl p-6 border border-green-500/30">
-          <h3 className="text-green-400 font-bold mb-3">✅ الصورة الصحيحة</h3>
+          <h3 className="text-green-400 font-bold mb-3">✅ خيارات عملية شائعة</h3>
           <ul className="text-gray-300 text-sm space-y-1">
             <li>• خلفية بسيطة (أبيض، رمادي)</li>
             <li>• وجه واضح يأخذ 60% من الإطار</li>
@@ -36,7 +35,7 @@ export const CareerLinkedInSection = () => (
           </ul>
         </div>
         <div className="bg-red-900/20 rounded-xl p-6 border border-red-500/30">
-          <h3 className="text-red-400 font-bold mb-3">❌ أخطاء قاتلة</h3>
+          <h3 className="text-red-400 font-bold mb-3">⚠️ ما قد يشتت أو يضلل</h3>
           <ul className="text-gray-300 text-sm space-y-1">
             <li>• صورة سيلفي</li>
             <li>• صورة من مناسبة عائلية</li>
@@ -63,7 +62,7 @@ export const CareerLinkedInSection = () => (
     {/* Banner */}
     <section className="space-y-4 mt-8">
       <h2 className="text-2xl font-bold text-white">🖼️ Banner / Cover Image</h2>
-      <Alert type="info">كثير يتجاهلونه. هذا خطأ! Banner احترافي يقول للموظف خلال ثانية: "هذا شخص أمن سيبراني محترف".</Alert>
+      <Alert type="info">الـBanner عنصر اختياري للاتساق البصري، وليس دليل خبرة ولن يعوض مشروعًا أو وصفًا صادقًا. استخدم تصميمًا بسيطًا تملك حق استخدامه ولا تضع شعارات شركات أو شهادات لا تخصك.</Alert>
       <div className="grid md:grid-cols-3 gap-4">
         <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
           <h4 className="text-cyan-400 font-bold mb-2">خيار 1: تصميم Canva</h4>
@@ -82,13 +81,13 @@ export const CareerLinkedInSection = () => (
 
     {/* Headline */}
     <section className="space-y-4 mt-8">
-      <h2 className="text-2xl font-bold text-white">✍️ الـ Headline (الأهم!)</h2>
-      <Alert type="warning">السطر تحت اسمك مباشرة. يظهر في نتائج البحث والتعليقات والإشعارات. <strong>220 حرف كحد أقصى.</strong></Alert>
+      <h2 className="text-2xl font-bold text-white">✍️ الـ Headline: واجهة البحث الأولى</h2>
+      <Alert type="warning">السطر تحت اسمك مباشرة وقد يظهر في نتائج البحث والتفاعل. التزم بالحد الذي تعرضه واجهة LinkedIn وقت التعديل؛ قد تتغير حدود المنتج. اكتب دورًا مستهدفًا + 2–4 مهارات تستطيع إثباتها + وضعك الحقيقي.</Alert>
 
       <div className="grid md:grid-cols-2 gap-4">
         <div className="bg-red-900/20 rounded-xl p-4 border border-red-500/30">
           <h4 className="text-red-400 font-bold mb-2">❌ ضعيف</h4>
-          <p className="text-gray-400 text-sm font-mono" dir="ltr">Cybersecurity Student at King Saud University</p>
+          <p className="text-gray-400 text-sm font-mono" dir="ltr">Student | Looking for opportunities</p>
         </div>
         <div className="bg-green-900/20 rounded-xl p-4 border border-green-500/30">
           <h4 className="text-green-400 font-bold mb-2">✅ قوي</h4>
@@ -111,41 +110,26 @@ export const CareerLinkedInSection = () => (
 
       <CodeBlock
         title="قالب About جاهز لك"
-        code={`🛡️ Aspiring SOC Analyst passionate about defensive cybersecurity and threat detection.
+        code={`🛡️ Final-year cybersecurity student preparing for junior SOC and security operations roles.
 
-As a senior cybersecurity student, I've built strong foundations in security operations through extensive hands-on practice in my home lab environment, combining theoretical knowledge with real-world application.
+I practice a repeatable workflow in an isolated home lab: validate telemetry, query events, triage alerts, preserve evidence, and write concise escalation notes.
 
-🎯 What I do:
-▸ Build and analyze security detections using Wazuh SIEM, Sysmon, and Windows Event Logs
-▸ Investigate simulated attacks including brute force, lateral movement, credential dumping, and persistence
-▸ Create detection rules mapped to MITRE ATT&CK framework
-▸ Develop automation tools using Python and PowerShell for log analysis and IOC extraction
-▸ Document complete incident investigations following NIST IR Lifecycle methodology
+Evidence I can discuss:
+▸ [Project name]: [what you actually built] — [measured test and result]
+▸ [Investigation]: [data sources] — [decision and evidence]
+▸ [Detection]: [hypothesis] — [labeled tests, limitations, and tuning]
 
-💼 Technical Skills:
-• SIEM: Wazuh, Splunk basics
-• Endpoint: Sysmon, Windows Event Viewer, PowerShell
-• Network: Wireshark, TCP/IP analysis, DNS/TLS deep dive
-• Scripting: Python, PowerShell, Bash
-• Frameworks: MITRE ATT&CK, NIST, Cyber Kill Chain
-• OS: Windows Server, Windows 11, Ubuntu, Kali Linux
+Tools I have used hands-on:
+• SIEM/query: [only products and languages used]
+• Endpoint/network: [tools used]
+• Systems/scripting: [skills you can demonstrate]
+• Frameworks: [how you applied them, not names alone]
 
-🚀 Featured Projects (on GitHub):
-▸ Wazuh SIEM Deployment with custom detection rules
-▸ Windows AD Lateral Movement Detection Lab
-▸ Linux SSH Brute Force Investigation with Python automation
-▸ Network Traffic Analysis (DNS, TCP, TLS)
-▸ Phishing Email Investigation playbook
-
-🤝 Open to:
-▸ Junior SOC Analyst positions
-▸ Cybersecurity internships
-▸ Networking with security professionals
-
-📫 Let's connect!
-GitHub: github.com/[your-username]
-Email: your.email@example.com`}
+I am currently exploring [internship / junior SOC] roles in [truthful locations or remote eligibility].
+Portfolio: [URL]
+Contact: [professional email]`}
       />
+      <Alert type="danger">استبدل كل حقل بين [ ] بحقيقة يمكنك عرض دليلها أو احذفه. لا تنسخ أدوات أو هجمات أو مشاريع من المثال، ولا تصف مختبرًا بأنه خبرة عمل.</Alert>
     </section>
 
     {/* Featured */}
@@ -154,7 +138,7 @@ Email: your.email@example.com`}
       <p className="text-gray-400 text-sm">قسم يظهر بعد About ويعرض روابط مهمة بشكل مرئي.</p>
       <div className="grid md:grid-cols-2 gap-4">
         {[
-          { num: 1, title: 'GitHub Portfolio Repository', desc: 'SOC Blue Team Portfolio - 8+ hands-on security projects' },
+          { num: 1, title: 'GitHub Portfolio Repository', desc: '2–3 دراسات عميقة موثقة أفضل من عدد كبير سطحي' },
           { num: 2, title: 'أفضل مشروع لك', desc: 'مثلاً Wazuh Deployment Project مع screenshot' },
           { num: 3, title: 'TryHackMe Profile', desc: 'إذا عندك إنجازات ومستوى جيد' },
           { num: 4, title: 'مقال LinkedIn كتبته', desc: 'أي post حصل على تفاعل جيد' },
@@ -175,47 +159,48 @@ Email: your.email@example.com`}
     {/* Experience */}
     <section className="space-y-4 mt-8">
       <h2 className="text-2xl font-bold text-white">💼 Experience Section</h2>
-      <Alert type="golden" title="إذا ما عندك خبرة عمل">
-        أضف "Self-Directed Projects" كـ Experience. يظهر أنك تتعلم ذاتياً ويحتوي كلمات ATS ويربط بـ GitHub!
+      <Alert type="golden" title="إذا لم تكن لديك خبرة عمل أمنية">
+        يمكنك عرض “Self-Directed Projects” بوضوح كمشاريع شخصية أو في قسم Projects؛ لا تضع شركة وهمية ولا تسمها وظيفة SOC. الهدف أن يستطيع القارئ تمييز التعليم والمختبر والخبرة المدفوعة فورًا.
       </Alert>
 
       <CodeBlock
         title="نموذج Experience بدون خبرة عمل"
-        code={`Title: SOC Analyst Projects (Self-Directed)
-Company: Personal Home Lab
-Duration: January 2025 - Present
-Location: Riyadh, Saudi Arabia
+        code={`Title: Security Operations Home Lab (Self-Directed Project)
+Organization: Personal project — not employment
+Dates: [actual month/year] – [end or Present]
+Location: Remote / [truthful location]
 
-Conducting hands-on cybersecurity projects in a personal home lab environment to develop practical SOC analyst skills.
+Goal: [specific skill or problem]
+Environment: [VMs, data sources, versions]
 
-Key Activities:
-▸ Deployed Wazuh SIEM with 3 endpoints and created 8 custom detection rules
-▸ Investigated simulated attacks including PowerShell attacks, lateral movement via PsExec, and credential dumping
-▸ Built automation tools in Python and PowerShell for log parsing and IOC extraction
-▸ Analyzed network traffic captures (PCAPs) to detect port scanning, DGA patterns, and beaconing
-▸ Created comprehensive incident reports mapped to MITRE ATT&CK following NIST IR Lifecycle
-▸ Documented all projects with detailed write-ups on GitHub
+▸ Built [what you actually configured] and verified ingestion with [benign test event]
+▸ Investigated [simulated scenario] using [queries/data], concluding [measured outcome]
+▸ Tested [detection] against [N labeled cases]; recorded [real result and limitation]
+▸ Produced [sanitized report/runbook/repository link]
 
-Tools: Wazuh, Sysmon, Wireshark, PowerShell, Python, Windows Event Logs, MITRE ATT&CK
-GitHub: github.com/[your-username]/soc-portfolio`}
+Tools used hands-on: [only tools you can demonstrate]
+Evidence: [repository or write-up URL]`}
       />
 
       <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
         <h3 className="text-cyan-400 font-bold mb-3">إذا عندك خبرة سابقة (حتى لو مش أمن)</h3>
         <p className="text-gray-400 text-sm mb-3">اربطها بمهارات قابلة للنقل:</p>
-        <CodeBlock code={`Title: Technical Support
-Company: [Company Name]
-Duration: 2023 - 2024
+        <CodeBlock code={`Title: [Actual role]
+Company: [Actual organization]
+Dates: [Actual dates]
 
-▸ Resolved 100+ technical issues weekly, developing troubleshooting skills applicable to SOC analysis
-▸ Documented technical procedures and incidents, similar to incident reporting in SOC
-▸ Communicated with stakeholders at various levels, essential for SOC escalation`} />
+▸ Resolved [measured number, only if recorded] technical issues by reproducing symptoms, isolating causes, and documenting outcomes
+▸ Wrote [actual procedure/report] used by [actual audience or omit]
+▸ Communicated priority, impact, and next steps to [actual stakeholders]
+
+Translate the workflow, but do not relabel support work as incident response or SOC experience.`} />
       </div>
     </section>
 
     {/* Skills */}
     <section className="space-y-4 mt-8">
-      <h2 className="text-2xl font-bold text-white">🛠️ Skills Section (30+ مهارة)</h2>
+      <h2 className="text-2xl font-bold text-white">🛠️ Skills Section — الجودة قبل العدد</h2>
+      <p className="text-gray-300 text-sm">اختر المهارات المطابقة للدور والتي استخدمتها فعلًا. القوائم أدناه بنك اقتراحات وليست قائمة تُنسخ كاملة؛ احذف Splunk أو Kerberos أو أي مهارة لا تستطيع شرحها وتنفيذ مثال عليها.</p>
       <div className="grid md:grid-cols-2 gap-4">
         <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
           <h4 className="text-red-400 font-bold mb-2">🔴 الأساسية (أعلى الترتيب)</h4>
@@ -244,8 +229,8 @@ export const CareerLinkedInContentSection = () => (
     <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3"><span>📱</span>استراتيجية المحتوى على LinkedIn</h1>
     <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
 
-    <Alert type="golden" title="القاعدة الذهبية">
-      LinkedIn algorithm يحب الحسابات النشطة. حساب نشط = يظهر أكثر = فرص أكثر.
+    <Alert type="golden" title="القاعدة العملية">
+      لا نعرف خوارزمية LinkedIn كاملة ولا يضمن النشر فرصة. انشر فقط ما يضيف دليلًا أو شرحًا صحيحًا، وتابع أسبوعيًا profile views والرسائل والردود. إذا استهلك المحتوى وقت المختبرات والتقديم، خفّضه.
     </Alert>
 
     <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700 mb-8">
@@ -255,7 +240,7 @@ export const CareerLinkedInContentSection = () => (
         <div className="bg-green-900/20 rounded p-3"><p className="text-green-400 font-bold">الثلاثاء</p><p className="text-gray-400 text-xs">تحديث مشروع أو درس</p></div>
         <div className="bg-purple-900/20 rounded p-3"><p className="text-purple-400 font-bold">الخميس</p><p className="text-gray-400 text-xs">تفاعل مع خبر أمني</p></div>
       </div>
-      <p className="text-gray-400 text-xs text-center mt-3">3 منشورات أسبوعياً = نشاط ممتاز</p>
+      <p className="text-gray-400 text-xs text-center mt-3">هذا بنك أفكار لا حصة إلزامية: منشور موثق كل 1–2 أسبوع مع تفاعل حقيقي قد يكون أنسب لوقتك. اختبر وعدّل.</p>
     </div>
 
     {/* أنواع المنشورات */}
@@ -284,7 +269,7 @@ export const CareerLinkedInContentSection = () => (
 - Technique: T1021.002 - SMB/Windows Admin Shares
 
 💡 Detection Tip:
-محطات العمل لا يجب أن تتصل ببعضها عبر SMB.
+لا أفترض أن اتصال SMB بين محطات العمل خبيث. أبني baseline وأربط المصدر والهوية والوجهة ووقت الاتصال وprocess/service creation؛ سياسة الشبكة هي التي تحدد المسموح.
 
 #cybersecurity #blueteam #SOC #SIEM #MITREATTACK`} />
         </div>
@@ -296,21 +281,26 @@ export const CareerLinkedInContentSection = () => (
           <h3 className="text-green-400 font-bold">🚀 Post نوع 2: مشاركة مشروع</h3>
         </div>
         <div className="p-4">
-          <CodeBlock code={`🚀 أكملت مشروعي الجديد: Wazuh SIEM Deployment
+          <CodeBlock code={`🔬 مختبر موثق: [اسم المشروع]
 
-📋 ما أنجزته:
-✅ نشر Wazuh server على Ubuntu 22.04
-✅ ربط 3 agents (DC, Windows Client, Ubuntu)
-✅ كتابة 8 قواعد كشف custom
-✅ ربط القواعد بـ MITRE ATT&CK
-✅ اختبار شامل بسيناريوهات حقيقية
+السؤال الذي اختبرته:
+[فرضية محددة]
 
-💡 أهم درس تعلمته:
-الـ false positives تتطلب tuning مستمر. القاعدة الأولى كانت تنتج 50 تنبيه يومياً، وبعد التحسين أصبحت 2-3 فقط.
+البيئة:
+[إصدارات وعدد endpoints الحقيقي]
 
-📁 المشروع كامل على GitHub: [رابط]
+الاختبار والنتيجة:
+✅ ولّدت [N] أحداث حميدة/موسومة
+✅ تحققت من وصولها إلى [data source]
+✅ اختبرت query/rule على [N] حالات
+📊 النتيجة المقاسة: [TP/FP/FN أو زمن ingestion الحقيقي]
 
-#cybersecurity #wazuh #SIEM #detectionengineering #SOC`} />
+أهم قيد:
+[ما لا يغطيه الاختبار أو سبب false positive]
+
+📁 تقرير منزوع الحساسية وخطوات إعادة الاختبار: [رابط]
+
+#cybersecurity #SIEM #detectionengineering #SOC`} />
         </div>
       </div>
 
@@ -320,21 +310,20 @@ export const CareerLinkedInContentSection = () => (
           <h3 className="text-yellow-400 font-bold">📚 Post نوع 3: مشاركة تعلم</h3>
         </div>
         <div className="p-4">
-          <CodeBlock code={`📚 درس مهم تعلمته اليوم:
+          <CodeBlock code={`📚 درس من مختبر Windows telemetry:
 
-اكتشفت أهمية حقل ParentProcessName في Event 4688.
+ظهور powershell.exe كابن لـ winword.exe يرفع الشك، لكنه لا يثبت وحده وجود macro خبيث.
 
-🎯 الفرق:
-❌ مشبوه: powershell.exe ← Parent: winword.exe
-   (Word يفتح PowerShell؟ هذا macro malware!)
+ما جمعته قبل القرار:
+▸ Command line وScript Block logging إن توفر
+▸ Parent/child lineage والتوقيع والمسار
+▸ اتصالات الشبكة والملفات الناتجة
+▸ المستخدم والجهاز والتغيير الإداري المعتمد
 
-✅ طبيعي: powershell.exe ← Parent: ConfigMgr.exe
-   (SCCM agent ينفذ سكريبت إدارة عادي)
+النتيجة في حالتي:
+[اكتب نتيجتك الحقيقية والدليل أو قل إن الحكم بقي غير محسوم]
 
-💡 الدرس:
-لا تنظر للأمر فقط، انظر دائماً للـ parent process.
-
-"Office app spawning PowerShell = 🚨 always investigate"
+💡 الدرس: process relationship نقطة بدء للتحقيق، لا verdict.
 
 #SOCanalyst #cybersecurity #blueteam #incidentresponse`} />
         </div>
@@ -346,20 +335,24 @@ export const CareerLinkedInContentSection = () => (
           <h3 className="text-red-400 font-bold">🔥 Post نوع 4: التفاعل مع أخبار أمنية</h3>
         </div>
         <div className="p-4">
-          <CodeBlock code={`🔥 تحليل: ثغرة CVE-2025-XXXXX الجديدة
+          <CodeBlock code={`🔎 مراجعة دفاعية: [CVE-ID الحقيقي]
 
-📊 التفاصيل:
-- CVSS Score: 9.8 (Critical)
-- النوع: Authentication Bypass
-- التأثير: تنفيذ كود عن بعد
+المصادر الأولية:
+- Vendor advisory: [URL]
+- CVE record / CISA KEV إن انطبق: [URL]
 
-🎯 ما يجب أن يفعله SOC Analysts:
-1. تحديد الأجهزة المتأثرة
-2. تطبيق patch فوراً
-3. مراقبة logs للعلامات
-4. تحديث detection rules
+ما تحقق منه:
+- المنتجات والإصدارات المتأثرة: [نص دقيق]
+- الاستغلال المعروف: [نعم/لا/غير معلوم مع المصدر والتاريخ]
+- أصولنا المتأثرة: [نتيجة inventory أو «لا أملك بيئة مؤسسة»]
 
-ما رأيكم؟ كيف تتعاملون مع zero-days في فرقكم؟
+أولوية العمل لا يحددها CVSS وحده؛ أربط exposure وasset criticality والاستغلال والضوابط.
+
+خطوات SOC المقترحة:
+1. Inventory وتأكيد النسخة
+2. تطبيق توجيه المورد عبر change process
+3. Hunt بمؤشرات/سلوك منشور وموثق
+4. توثيق فجوات telemetry والنتيجة
 
 #cybersecurity #vulnerability #SOC #blueteam`} />
         </div>
@@ -376,12 +369,13 @@ export const CareerLinkedInNetworkSection = () => (
 
     {/* من تضيف */}
     <section className="space-y-4">
-      <h2 className="text-2xl font-bold text-white">👥 من تضيف؟ (حسب الأولوية)</h2>
+      <h2 className="text-2xl font-bold text-white">👥 من تتواصل معه؟ — حسب هدفك وأهليتك</h2>
+      <p className="text-gray-300 text-sm">استبدل البلد والشركات بالسوق الذي تستطيع العمل فيه قانونيًا أو عن بُعد. بعض الأدوار المنظمة قد تقيد الجنسية أو الموقع؛ اقرأ الإعلان ولا تبنِ قائمة على الرغبة فقط.</p>
       <div className="space-y-3">
         {[
-          { priority: 1, title: 'Recruiters متخصصون في Cybersecurity', search: '"Cybersecurity Recruiter" Saudi Arabia' },
-          { priority: 2, title: 'SOC Managers و Team Leads', search: '"SOC Manager" Saudi Arabia' },
-          { priority: 3, title: 'Senior SOC Analysts في الشركات المستهدفة', search: '"SOC Analyst" Aramco' },
+          { priority: 1, title: 'Recruiters لأدوار Cybersecurity المناسبة', search: '"Cybersecurity Recruiter" [eligible country]' },
+          { priority: 2, title: 'SOC Managers و Team Leads', search: '"SOC Manager" [target city/country]' },
+          { priority: 3, title: 'SOC Analysts في شركات مستهدفة', search: '"SOC Analyst" [target company]' },
           { priority: 4, title: 'محتوى الأمن السيبراني العربي', search: 'أشهر مؤلفين عرب في الأمن' },
           { priority: 5, title: 'زملاء الدراسة والخريجين', search: 'من جامعتك والجامعات السعودية' },
         ].map(item => (
@@ -399,35 +393,14 @@ export const CareerLinkedInNetworkSection = () => (
     {/* قوالب الرسائل */}
     <section className="space-y-4 mt-8">
       <h2 className="text-2xl font-bold text-white">💌 قوالب Connection Request</h2>
-      <Alert type="warning">أرسل <strong>دائماً</strong> مع رسالة مخصصة. الرسالة الفارغة = 90% رفض!</Alert>
+      <Alert type="warning">لا توجد هنا نسبة رفض موثوقة ولا قاعدة أن كل طلب يحتاج رسالة. إذا كتبت، اجعلها قصيرة وصادقة واذكر سببًا محددًا؛ لا تطلب إحالة أو 15 دقيقة من شخص غريب في أول تواصل، ولا ترسل دفعات آلية.</Alert>
 
       <div className="space-y-4">
-        <CodeBlock title="للـ Recruiters" code={`Hi [Name],
+        <CodeBlock title="للـ Recruiters" code={`Hi [Name] — I saw that you recruit for [specific security area/region]. I am a final-year cybersecurity student with a documented lab project on [relevant skill]. I would be glad to connect and follow roles for which I meet the location and eligibility requirements. — [Your name]`} />
 
-I came across your profile and noticed you specialize in cybersecurity recruitment in Saudi Arabia. I'm a final-year cybersecurity student building hands-on SOC skills through home lab projects, currently exploring opportunities in the field.
+        <CodeBlock title="للـ SOC Managers" code={`Hi [Name] — your post about [specific topic] helped me improve [specific lab step]. I documented the result here: [optional URL]. Thank you for sharing it; I would be glad to connect. — [Your name]`} />
 
-I'd love to connect and learn from your network.
-
-Best regards, Ahmed`} />
-
-        <CodeBlock title="للـ SOC Managers" code={`Hi [Name],
-
-Your work in cybersecurity at [Company] is inspiring. As an aspiring SOC analyst, I follow professionals like you to learn industry best practices.
-
-I'd appreciate connecting to learn from your insights and journey in the field.
-
-Best regards, Ahmed`} />
-
-        <CodeBlock title="رسالة بعد التقديم على وظيفة" code={`Hi [Name],
-
-I recently applied for the Junior SOC Analyst position at [Company] and noticed you're part of the team. I'd love to learn more about the team culture and the role.
-
-I've built several hands-on SOC projects in my home lab, and I'm passionate about contributing to [Company]'s security operations.
-
-Would you have 15 minutes for a brief chat?
-
-Best regards, Ahmed
-[Your LinkedIn URL]`} />
+        <CodeBlock title="رسالة بعد التقديم على وظيفة" code={`Hi [Name] — I applied through the official channel for [exact role, requisition ID] on [date]. My closest evidence is [one relevant project/result]: [URL]. I meet [location/work authorization if the posting asks]. No action is needed; I wanted to share the relevant evidence. Thank you. — [Your name]`} />
       </div>
     </section>
 
@@ -440,10 +413,10 @@ Best regards, Ahmed
         <ol className="text-gray-300 text-sm space-y-2">
           <li>1. اذهب لـ Profile → "Open to" → "Finding a new job"</li>
           <li>2. Job titles: <span className="text-cyan-400">SOC Analyst, Security Analyst, Cybersecurity Analyst, Junior SOC, Blue Team Analyst</span></li>
-          <li>3. Locations: <span className="text-cyan-400">Riyadh, Jeddah, Dammam, Saudi Arabia, Remote</span></li>
-          <li>4. Start date: <span className="text-cyan-400">Immediately</span></li>
-          <li>5. Job types: <span className="text-cyan-400">Full-time, Internship</span></li>
-          <li>6. Visibility: <span className="text-green-400">All LinkedIn members</span> (لأنك طالب)</li>
+          <li>3. Locations: <span className="text-cyan-400">أماكن تستطيع الحضور أو الانتقال إليها فعلًا؛ وRemote لا يعني العمل من أي دولة</span></li>
+          <li>4. Start date: <span className="text-cyan-400">تاريخ تفرغك الحقيقي مع التزامات الجامعة</span></li>
+          <li>5. Job types: <span className="text-cyan-400">ما تقبله فعلًا: Full-time / Internship / Co-op</span></li>
+          <li>6. Visibility: <span className="text-green-400">اخترها وفق خصوصيتك ووضعك الحالي؛ الظهور العام ليس إلزاميًا</span></li>
         </ol>
       </div>
 
@@ -469,7 +442,7 @@ Best regards, Ahmed
     {/* Recommendations */}
     <section className="space-y-4 mt-8">
       <h2 className="text-2xl font-bold text-white">⭐ Recommendations</h2>
-      <p className="text-gray-400 text-sm">شهادات مكتوبة من أشخاص يعرفونك. أقوى من Endorsements بكثير.</p>
+      <p className="text-gray-400 text-sm">اطلب توصية فقط من شخص عمل معك ويستطيع ذكر سلوك أو نتيجة محددة. التوصية ليست بديلًا عن الدليل، ولا تطلب من شخص أن يشهد بمهارة لم يرها.</p>
 
       <div className="grid md:grid-cols-3 gap-3">
         <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
@@ -496,9 +469,9 @@ export const CareerLinkedInChecklistSection = () => {
     { title: 'About Section', items: ['فقرات منظمة','كلمات مفتاحية موجودة','Call to action في النهاية','روابط GitHub و Email'] },
     { title: 'Featured', items: ['رابط GitHub Portfolio','أفضل مشروع','أي إنجاز مرئي'] },
     { title: 'Experience', items: ['Self-Directed Projects مضافة','أي خبرة سابقة (حتى لو غير أمنية)','أي تدريب صيفي'] },
-    { title: 'Education & Skills', items: ['الجامعة موجودة','المواد ذات الصلة مذكورة','30+ مهارة مرتبة','طلبت Endorsements','كل الشهادات مضافة','Languages (العربية والإنجليزية)'] },
-    { title: 'Open to Work & Activity', items: ['Open to Work مفعّل','الوظائف والمواقع محددة','أول منشور منشور','تعليقات على منشورات الآخرين','متابعة 50+ شركة'] },
-    { title: 'Networking', items: ['100+ Connection ذات صلة','رسائل مخصصة مرسلة','انضمام لـ 10+ مجموعات','طلبت Recommendations من 3+ أشخاص'] },
+    { title: 'Education & Skills', items: ['الجامعة والدرجة والتاريخ صحيحة','المواد ذات الصلة مذكورة إن كانت قوية','كل مهارة مدعومة بمثال','لا Endorsements متبادلة مصطنعة','الشهادات المكتملة فقط مع رابط تحقق إن توفر','Languages بمستوى صادق'] },
+    { title: 'Open to Work & Activity', items: ['إعدادات Open to Work تناسب خصوصيتي','الوظائف والمواقع والأهلية دقيقة','نشرت دليلًا مفيدًا إن كان لدي ما يستحق','كتبت تعليقات نوعية لا مجاملات آلية','أتابع الشركات المؤهلة والمناسبة'] },
+    { title: 'Networking', items: ['Connections ذات صلة لا رقم فارغ','الرسائل مخصصة وقليلة','المجموعات مفيدة ونشطة إن وجدت','Recommendations من أشخاص شاهدوا عملي فقط'] },
   ];
 
   return (
@@ -523,10 +496,10 @@ export const CareerLinkedInChecklistSection = () => {
             { day: 'اليوم 1', tasks: 'صورة احترافية + Banner + Headline' },
             { day: 'اليوم 2', tasks: 'About كامل + Skills + Languages' },
             { day: 'اليوم 3', tasks: 'Experience + Education + Certifications' },
-            { day: 'اليوم 4', tasks: 'Open to Work + 30 شخص للتواصل + 10 requests' },
-            { day: 'اليوم 5', tasks: 'أول منشور + 10 تعليقات + 5 مجموعات' },
-            { day: 'اليوم 6', tasks: 'Recommendation + تابع 30 شركة + ابدأ بحث' },
-            { day: 'اليوم 7', tasks: 'مراجعة + قدّم على 5 وظائف + تواصل مع موظفين' },
+            { day: 'اليوم 4', tasks: 'Open to Work بدقة + قائمة أشخاص ذوي صلة + رسالتان نوعيتان' },
+            { day: 'اليوم 5', tasks: 'انشر دليل مشروع إن كان جاهزًا + تعليقات تضيف معلومة' },
+            { day: 'اليوم 6', tasks: 'تابع شركات مؤهلة + فعّل searches/alerts مناسبة' },
+            { day: 'اليوم 7', tasks: 'راجع الأخطاء والخصوصية + قدّم لفرص عالية الملاءمة وسجّل النتيجة' },
           ].map(item => (
             <div key={item.day} className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
               <p className="text-cyan-400 font-bold text-sm">{item.day}</p>
@@ -537,9 +510,8 @@ export const CareerLinkedInChecklistSection = () => {
       </div>
 
       <Alert type="golden">
-        <p className="text-xl font-bold">أنت الآن في مرحلة التنفيذ!</p>
-        <p className="mt-2">كل دقيقة تقرأ فيها بدون عمل = دقيقة ضائعة. افتح LinkedIn الآن. ابدأ بتحديث Headline. لا تنتظر.</p>
-        <p className="mt-4 text-2xl">نراك في القمة قريباً 🚀</p>
+        <p className="text-xl font-bold">نفّذ نسخة أولى ثم قِسها</p>
+        <p className="mt-2">خصص جلسة محدودة لتحديث الملف، ثم عد إلى المختبر والتقديم. راجع أسبوعيًا: ظهور البحث، مشاهدات المشاريع، الردود، والمقابلات. غيّر headline أو الأدلة عنصرًا واحدًا في كل مرة لتعرف ما الذي تحسن.</p>
       </Alert>
     </div>
   );

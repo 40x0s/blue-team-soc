@@ -1,5 +1,10 @@
 import { Section } from '../types';
 
+export const foundationSections: Section[] = [
+  { id: 'start-here', title: 'ابدأ هنا وخطة 8 أشهر', icon: '🚀' },
+  { id: 'lab-setup', title: 'بناء المختبر الآمن', icon: '🧰' },
+];
+
 export const networkSections: Section[] = [
   { id: 'philosophy', title: 'الفلسفة قبل البداية', icon: '🎯' },
   { id: 'basics', title: 'الأساسيات الناقصة', icon: '📚' },
@@ -59,6 +64,10 @@ export const socSections: Section[] = [
   { id: 'soc-diamond', title: 'Diamond Model', icon: '💎' },
   { id: 'soc-threatintel', title: 'Threat Intelligence', icon: '🧠' },
   { id: 'soc-siem', title: 'SIEM للمحلل', icon: '📊' },
+  { id: 'soc-querying', title: 'KQL / SPL / OpenSearch', icon: '⌨️' },
+  { id: 'soc-casework', title: 'Tickets وSLA وHandover', icon: '🎫' },
+  { id: 'soc-identity', title: 'Entra وCloud Identity', icon: '☁️' },
+  { id: 'soc-detection', title: 'Detection وMalware Triage', icon: '🧠' },
   { id: 'soc-alerts', title: 'تحقيق Alerts الشائعة', icon: '🚨' },
   { id: 'soc-nist', title: 'NIST IR Lifecycle', icon: '📜' },
   { id: 'soc-phishing', title: 'Phishing Investigation', icon: '🎣' },
@@ -88,6 +97,7 @@ export const quizSections: Section[] = [
 ];
 
 export const careerSections: Section[] = [
+  { id: 'career-plan', title: 'خطة التوظيف والمقابلة', icon: '📈' },
   { id: 'career-cv', title: 'كتابة CV احترافي', icon: '📄' },
   { id: 'career-cvtemplate', title: 'قالب CV جاهز', icon: '📋' },
   { id: 'career-mistakes', title: 'أخطاء تقتل CV', icon: '❌' },
