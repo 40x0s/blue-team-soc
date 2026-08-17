@@ -9,6 +9,10 @@ export interface LabStep {
   command?: string;
   description: string;
   expected?: string;
+  /** تفسير ما يتعلمه الطالب من الخطوة، وليس وصف الزر فقط. */
+  why?: string;
+  /** تحذير خاص بالخطوة إذا كانت تغيّر النظام أو تولّد نشاطًا هجوميًا. */
+  caution?: string;
 }
 
 export interface Lab {
@@ -19,4 +23,9 @@ export interface Lab {
   steps: LabStep[];
   deliverable: string;
   filters?: string[];
+  prerequisites?: string[];
+  evidence?: string[];
+  cleanup?: string;
+  estimatedMinutes?: number;
+  safety?: string;
 }

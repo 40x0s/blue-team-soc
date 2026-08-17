@@ -1,189 +1,163 @@
 import Alert from '../../components/Alert';
 import CodeBlock from '../../components/CodeBlock';
 import ChecklistItem from '../../components/ChecklistItem';
+import Table from '../../components/Table';
 
 // === SOC Structure Section ===
 export const SocStructureSection = () => (
   <div className="space-y-8">
-    <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3"><span>🏢</span>هيكل SOC ومستوياته</h1>
-    <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
+    <h1 className="text-3xl font-bold text-cyan-400">🏢 كيف يعمل SOC؟</h1>
+    <Alert type="warning" title="Tier ليس معيارًا عالميًا">
+      قد يجمع SOC صغير triage وIR وengineering في شخص واحد، وقد يفصل MSSP الأدوار حسب العميل. اقرأ الوصف الوظيفي وRACI والـplaybooks الفعلية؛ لا تفترض أن Tier 1 يغلق نسبة محددة أو يملك containment.
+    </Alert>
 
     <div className="grid md:grid-cols-2 gap-4">
       {[
-        { tier: 'Tier 1 - Analyst (أنت هنا)', color: 'green', duties: ['مراقبة Alerts باستمرار', 'فرز أولي Initial Triage', 'التحقيق السريع', 'توثيق Incident Notes', 'التصعيد للـ Tier 2'], skills: ['أساسيات الشبكات', 'قراءة logs', 'استخدام SIEM', 'اتباع Playbooks'], sla: 'استجابة خلال 15 دقيقة | إغلاق 70% بدون تصعيد' },
-        { tier: 'Tier 2 - Incident Responder', color: 'yellow', duties: ['تحقيق عميق في الحوادث المصعدة', 'تحليل البرمجيات الخبيثة الأساسي', 'تنسيق الاستجابة', 'بناء Detection Rules', 'مراجعة عمل Tier 1'], skills: ['تحليل البرمجيات الخبيثة', 'Forensics', 'بناء SIEM rules', 'Threat hunting'], sla: '' },
-        { tier: 'Tier 3 - Senior / Threat Hunter', color: 'red', duties: ['Threat Hunting استباقي', 'تحليل APT', 'Reverse engineering', 'بناء detection capabilities', 'تطوير threat intelligence'], skills: [], sla: '' },
-        { tier: 'SOC Manager', color: 'purple', duties: ['إدارة الفريق', 'تطوير العمليات', 'التواصل مع الإدارة', 'إدارة الميزانية'], skills: [], sla: '' },
-      ].map((t, i) => (
-        <div key={i} className={`bg-${t.color}-900/20 rounded-xl p-6 border border-${t.color}-500/30`}>
-          <h3 className={`text-lg font-bold text-${t.color}-400 mb-4`}>{t.tier}</h3>
-          <div className="mb-3">
-            <p className="text-gray-400 text-xs font-bold mb-1">المسؤوليات:</p>
-            <ul className="text-gray-300 text-sm space-y-1">{t.duties.map((d, j) => <li key={j}>• {d}</li>)}</ul>
-          </div>
-          {t.skills.length > 0 && <div className="mb-3"><p className="text-gray-400 text-xs font-bold mb-1">المهارات:</p><ul className="text-gray-300 text-sm space-y-1">{t.skills.map((s, j) => <li key={j}>• {s}</li>)}</ul></div>}
-          {t.sla && <div className="bg-gray-800/50 rounded p-2 mt-3"><p className="text-cyan-400 text-xs">SLA: {t.sla}</p></div>}
-        </div>
+        ['L1 / Monitoring & Triage', ['مراقبة queues وصحة ingestion', 'تثبيت facts والسياق والنطاق الأولي', 'توثيق وصياغة escalation قابلة للعمل', 'تنفيذ actions المسموحة فقط']],
+        ['L2 / Investigation & Response', ['تحقيق أعمق وتوسيع scope', 'تنسيق containment/eradication/recovery', 'مراجعة الأدلة والقرارات', 'تحسين playbooks مع أصحابها']],
+        ['Detection / Hunting / Engineering', ['هندسة telemetry وdetections', 'اختبارات positive/negative وقياس الجودة', 'Threat hunting قائم على فرضية', 'إدارة content lifecycle']],
+        ['Leadership / Incident Command', ['الأولويات والمخاطر والموارد', 'قرارات incident وstakeholder communication', 'KPIs بلا حوافز ضارة', 'التحسين والامتثال والمورّدون']],
+      ].map(([role, duties]) => (
+        <article key={role as string} className="rounded-xl border border-gray-700 bg-gray-800/50 p-6">
+          <h3 className="font-bold text-cyan-300">{role as string}</h3>
+          <ul className="mt-3 space-y-2 text-sm text-gray-300">{(duties as string[]).map(duty => <li key={duty}>• {duty}</li>)}</ul>
+        </article>
       ))}
     </div>
 
-    <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-      <h3 className="text-lg font-bold text-white mb-4">⏰ ساعات عمل SOC</h3>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          { name: '24/7 SOC', desc: '3 shifts على مدار الساعة' },
-          { name: 'Follow-the-Sun', desc: 'فرق في مناطق زمنية مختلفة' },
-          { name: 'Business Hours', desc: 'ساعات العمل فقط' },
-          { name: 'On-Call', desc: 'متاح عند الحاجة خارج الدوام' },
-        ].map((s, i) => (
-          <div key={i} className="bg-gray-700/50 rounded-lg p-3 text-center">
-            <p className="text-cyan-400 font-bold text-sm">{s.name}</p>
-            <p className="text-gray-400 text-xs">{s.desc}</p>
-          </div>
-        ))}
-      </div>
-    </div>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">نماذج التغطية</h2>
+      <Table headers={['النموذج', 'الفكرة', 'سؤال المخاطر']} rows={[
+        ['24×7 shifts', 'فريق يغطي الساعة محليًا', 'handover، staffing، fatigue؟'],
+        ['Follow-the-sun', 'فرق في مناطق زمنية مختلفة', 'context loss وdata residency؟'],
+        ['Business hours + on-call', 'تغطية يومية وتصعيد خارجها', 'ما alert sources التي تستدعي on-call؟'],
+        ['MSSP / hybrid', 'طرف خارجي مع فريق داخلي', 'من يملك القرار والبيانات والـSLA؟'],
+      ]} />
+    </section>
+
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">KPIs لا تُقرأ منفردة</h2>
+      <Table headers={['Metric', 'يفيد في', 'خطر القياس']} rows={[
+        ['Time to acknowledge/triage', 'زمن queue والعمل الأولي', 'إغلاق سريع ضعيف الجودة'],
+        ['Escalation quality', 'اكتمال facts/scope/gaps', 'تقليل التصعيد لإرضاء رقم'],
+        ['Detection precision/coverage', 'جودة content', 'precision مرتفع مع false negatives'],
+        ['Telemetry health', 'freshness/loss/parser failures', 'تنبيه صامت بسبب ingestion gap'],
+        ['Case rework / QA', 'قابلية إعادة التحقيق', 'لوم الفرد بدل إصلاح العملية'],
+      ]} />
+      <Alert type="info">الأهداف والأزمنة تحددها المؤسسة حسب المخاطر والعقود؛ لا يوجد رقم 15 دقيقة أو نسبة إغلاق تصلح لكل SOC.</Alert>
+    </section>
   </div>
 );
 
 // === Alert Lifecycle Section ===
 export const SocAlertLifecycleSection = () => (
   <div className="space-y-8">
-    <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3"><span>🔄</span>Alert Lifecycle</h1>
-    <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
+    <h1 className="text-3xl font-bold text-cyan-400">🔄 Alert Lifecycle</h1>
+    <Alert type="info" title="Event ≠ Alert ≠ Incident">
+      Event ملاحظة telemetry؛ alert ناتج detection أو بلاغ يحتاج triage؛ incident حدث adverse يحقق معايير المؤسسة ويحتاج إدارة استجابة. لا تحوّل severity الأداة إلى verdict.
+    </Alert>
 
-    <div className="space-y-4">
+    <div className="space-y-3">
       {[
-        { num: 1, name: 'Detection (الكشف)', desc: 'التنبيه يأتي من: SIEM rule, EDR, IDS/IPS, Firewall, DLP, بلاغ مستخدم, Threat Intel', color: 'blue' },
-        { num: 2, name: 'Triage (الفرز)', desc: '5-15 دقيقة: ما نوعه؟ ما خطورته؟ هل معروف ومتكرر؟ ما الأجهزة المتأثرة؟ هل يستحق تحقيق؟', color: 'yellow' },
-        { num: 3, name: 'Investigation (التحقيق)', desc: 'جمع الأدلة من: Logs, Network traffic, Endpoint data, User activity, Threat intel', color: 'purple' },
-        { num: 4, name: 'Classification (التصنيف)', desc: 'True Positive | False Positive | Benign Positive | يحتاج مزيد من التحقيق', color: 'orange' },
-        { num: 5, name: 'Response (الاستجابة)', desc: 'احتواء التهديد → إزالته → إعادة الخدمة', color: 'red' },
-        { num: 6, name: 'Documentation (التوثيق)', desc: 'كتابة Incident Report → تحديث Playbook → مشاركة Lessons Learned', color: 'green' },
-        { num: 7, name: 'Closure (الإغلاق)', desc: 'إقفال ticket → إخطار الأطراف → أرشفة الأدلة', color: 'cyan' },
-      ].map((stage) => (
-        <div key={stage.num} className={`bg-${stage.color}-900/20 rounded-xl p-5 border border-${stage.color}-500/30 flex items-start gap-4`}>
-          <div className={`w-12 h-12 rounded-full bg-${stage.color}-600 flex items-center justify-center text-white font-bold text-xl flex-shrink-0`}>{stage.num}</div>
-          <div>
-            <h3 className={`text-lg font-bold text-${stage.color}-400`}>{stage.name}</h3>
-            <p className="text-gray-300 text-sm mt-1">{stage.desc}</p>
-          </div>
-        </div>
-      ))}
+        ['1', 'Receive & validate', 'سجّل alert ID/source/time، تحقق من schema وfreshness وduplicate/suppression.'],
+        ['2', 'Contextualize', 'اربط asset/user/role/change/baseline وcriticality.'],
+        ['3', 'Scope & investigate', 'ابحث قبل/بعد وعبر الكيانات، وافصل facts عن hypotheses.'],
+        ['4', 'Classify & prioritize', 'طبّق taxonomy وconfidence وimpact/urgency وسياسة المؤسسة.'],
+        ['5', 'Escalate / respond', 'سلّم evidence؛ نفّذ فقط action مخولًا مع rollback/verification.'],
+        ['6', 'Communicate & document', 'حدّث ticket أثناء العمل: queries، IDs، gaps، decisions، owners.'],
+        ['7', 'Close & improve', 'closure criteria، QA، tuning/test، telemetry gap وlesson owner/date.'],
+      ].map(([n, title, body]) => <article key={n} className="flex gap-4 rounded-xl border border-gray-700 bg-gray-800/50 p-5"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cyan-700 font-bold text-white">{n}</span><div><h3 className="font-bold text-cyan-300">{title}</h3><p className="mt-1 text-sm leading-7 text-gray-300">{body}</p></div></article>)}
     </div>
 
-    <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-      <h3 className="text-lg font-bold text-white mb-4">📊 True/False/Benign Positive</h3>
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-green-900/20 rounded-lg p-4 border border-green-500/30 text-center">
-          <h4 className="text-green-400 font-bold">True Positive</h4>
-          <p className="text-gray-400 text-xs mt-2">تنبيه صحيح لتهديد حقيقي</p>
-          <p className="text-green-400 text-xs mt-1">✅ تصرّف فوراً</p>
-        </div>
-        <div className="bg-red-900/20 rounded-lg p-4 border border-red-500/30 text-center">
-          <h4 className="text-red-400 font-bold">False Positive</h4>
-          <p className="text-gray-400 text-xs mt-2">تنبيه خاطئ - ليس تهديد</p>
-          <p className="text-yellow-400 text-xs mt-1">⚠️ حسّن القاعدة</p>
-        </div>
-        <div className="bg-yellow-900/20 rounded-lg p-4 border border-yellow-500/30 text-center">
-          <h4 className="text-yellow-400 font-bold">Benign Positive</h4>
-          <p className="text-gray-400 text-xs mt-2">تنبيه صحيح لنشاط مشروع</p>
-          <p className="text-gray-400 text-xs mt-1">📝 وثّق واستثني</p>
-        </div>
-        <div className="bg-red-900/30 rounded-lg p-4 border border-red-600/50 text-center">
-          <h4 className="text-red-500 font-bold">False Negative 🚨</h4>
-          <p className="text-gray-400 text-xs mt-2">تهديد حقيقي بدون تنبيه</p>
-          <p className="text-red-400 text-xs mt-1">الأخطر! لم يُكتشف</p>
-        </div>
-      </div>
-    </div>
+    <Table headers={['التصنيف', 'تعريف عملي', 'ملاحظة']} rows={[
+      ['True Positive', 'Detection طابق السلوك المقصود وكان security-relevant وفق التعريف', 'لا يحدد severity أو action وحده'],
+      ['False Positive', 'Detection طابق حالة خارج المنطق المقصود', 'أصلح logic/test لا مجرد allowlist سريع'],
+      ['Benign Positive', 'السلوك المقصود حدث لكنه مصرح/حميد في السياق', 'قد يحتاج توثيق/tuning محدود مع حفظ coverage'],
+      ['False Negative', 'سلوك مطلوب كشفه حدث دون alert مناسب', 'يظهر عبر hunt/test/incident؛ أصلح data أو logic أو operations'],
+      ['Insufficient evidence', 'المتاح لا يسمح بقرار', 'اذكر المطلوب والمالك والموعد؛ لا تجبر binary verdict'],
+    ]} />
+
+    <Alert type="warning">الـTP لا يعني «احتوِ فورًا»، والـBenign Positive لا يعني «استثنِ دائمًا». القرار يتبع impact وscope والثقة والـplaybook والسلطة.</Alert>
   </div>
 );
 
 // === Triage Playbook Section ===
 export const SocTriageSection = () => (
   <div className="space-y-8">
-    <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3"><span>📋</span>Triage Playbook التفصيلي</h1>
-    <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
+    <h1 className="text-3xl font-bold text-cyan-400">📋 Triage Playbook</h1>
+    <Alert type="golden" title="مخرج triage">
+      ليس «وجدت string». المخرج: facts + context + scope + competing hypotheses + confidence/gaps + decision + authorized next step.
+    </Alert>
 
     <div className="space-y-4">
       {[
-        { step: 1, title: 'اقرأ التنبيه كاملاً', details: ['اسم التنبيه (Alert Name)', 'الوصف والمصدر', 'الجهاز المتأثر والمستخدم', 'الوقت و Severity'] },
-        { step: 2, title: 'حدد السياق Context', details: ['هل المستخدم في دوامه؟', 'هل الجهاز معروف؟', 'هل النشاط معتاد لهذا المستخدم/الجهاز؟', 'هل هناك تنبيهات مشابهة سابقاً؟'] },
-        { step: 3, title: 'جمع الأدلة الأساسية', details: ['Windows: Event logs, Process creation (4688), Network (Sysmon 3), PowerShell (4104)', 'Linux: auth.log, syslog, bash history, ps, netstat', 'الشبكة: Firewall logs, Proxy logs, DNS queries, PCAP'] },
-        { step: 4, title: 'تحقق من المؤشرات', details: ['IPs: ابحث في threat intel', 'Domains: WHOIS و reputation', 'Hashes: VirusTotal', 'URLs: URLhaus'] },
-        { step: 5, title: 'قرار سريع', details: ['A. False Positive واضح → وثّق وأغلق', 'B. True Positive واضح → صعّد وابدأ الاحتواء', 'C. غير واضح → اجمع أدلة أكثر أو استشر Tier 2'] },
-        { step: 6, title: 'التوثيق', details: ['اكتب: ما حدث، الأدلة، التحليل، القرار، الإجراءات'] },
-      ].map((s) => (
-        <div key={s.step} className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-10 h-10 rounded-full bg-cyan-600 flex items-center justify-center text-white font-bold">{s.step}</div>
-            <h3 className="text-lg font-bold text-white">{s.title}</h3>
-          </div>
-          <ul className="space-y-1 text-gray-300 text-sm mr-14">
-            {s.details.map((d, i) => <li key={i}>• {d}</li>)}
-          </ul>
-        </div>
-      ))}
+        ['1 — ثبّت التنبيه', ['Alert/rule/version وrecord IDs', 'event time مقابل ingestion time وtimezone', 'source health/schema/duplicates']],
+        ['2 — افهم المنطق', ['ما conditions/threshold/window؟', 'ما expected data؟', 'ما الذي لم تختبره القاعدة؟']],
+        ['3 — تحقق من الكيانات', ['Asset role/owner/criticality', 'User/service identity وprivilege', 'IP/domain/hash age/shared context']],
+        ['4 — ابنِ timeline ونطاقًا', ['ابحث قبل/بعد بوقت مبرر', 'pivot عبر host/user/process/network', 'سجل sources searched وnot available']],
+        ['5 — اختبر بدائل', ['Change/admin/scanner/backup', 'Unauthorized action أو compromised identity', 'أي evidence يفرق الفرضيتين؟']],
+        ['6 — قرر وصعّد', ['classification + severity حسب policy', 'confidence وimpact observed/potential', 'action مشروط + owner + deadline']],
+      ].map(([title, details]) => <article key={title as string} className="rounded-xl border border-gray-700 bg-gray-800/50 p-6"><h3 className="font-bold text-cyan-300">{title as string}</h3><ul className="mt-3 space-y-2 text-sm text-gray-300">{(details as string[]).map(d => <li key={d}>• {d}</li>)}</ul></article>)}
     </div>
+
+    <Alert type="danger" title="Threat intel وخصوصية البيانات">
+      استعلم عن IP/domain/hash كقرينة وبمنصة معتمدة، وسجّل source/confidence/first-last seen. لا ترفع file/email/URL داخليًا أو raw logs إلى VirusTotal أو URLscan أو sandbox عامة. Reputation clean لا يثبت benign، وmatch قد يكون stale/shared.
+    </Alert>
+
+    <CodeBlock title="Triage note" language="text" code={`Alert / rule / event IDs: ...
+Observed facts (UTC): ...
+Asset + identity context: ...
+Scope searched / not searched: ...
+Competing hypotheses: ...
+Corroboration and gaps: ...
+Classification / severity / confidence: ...
+Authorized next step / owner / SLA: ...`} />
   </div>
 );
 
 // === Escalation Section ===
 export const SocEscalationSection = () => (
   <div className="space-y-8">
-    <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3"><span>⬆️</span>متى تُصعّد؟ (Escalation)</h1>
-    <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
+    <h1 className="text-3xl font-bold text-cyan-400">⬆️ Escalation: متى وكيف؟</h1>
+    <Alert type="warning" title="صعّد وفق trigger لا وفق الخوف">
+      الـmatrix والـSLA والـon-call path تخص المؤسسة. عند احتمال أثر كبير لا تنتظر اليقين؛ صعّد بوضوح أن المعلومات أولية، لكن لا تصف indicator منفردًا كـcompromise مؤكد.
+    </Alert>
 
     <div className="grid md:grid-cols-2 gap-4">
-      <div className="bg-red-900/20 rounded-xl p-6 border border-red-500/30">
-        <h3 className="text-red-400 font-bold mb-4">🚨 صعّد فوراً إذا:</h3>
-        <ol className="text-gray-300 text-sm space-y-2">
-          {['حساب Privileged (Admin, Service Account)', 'Event 1102 (Security log cleared)', 'سلوك يدل على Lateral Movement', 'اتصال بـ IP/Domain معروف خبيث', 'كشف برمجية خبيثة معروفة', 'تسريب بيانات محتمل', 'Ransomware indicators', 'نشاط من خارج البلد المعتاد', 'أكثر من جهاز متأثر', 'أداة هجوم (Cobalt Strike, Mimikatz)'].map((item, i) => (
-            <li key={i}>{i + 1}. {item}</li>
-          ))}
-        </ol>
-      </div>
-
-      <div className="bg-yellow-900/20 rounded-xl p-6 border border-yellow-500/30">
-        <h3 className="text-yellow-400 font-bold mb-4">⚠️ صعّد إذا:</h3>
-        <ul className="text-gray-300 text-sm space-y-2">
-          <li>• لست متأكد لكن الأثر محتمل كبير</li>
-          <li>• المستخدم أبلغ عن سلوك غريب</li>
-          <li>• تنبيهات متعددة من نفس المصدر</li>
-          <li>• نشاط في وقت غير معتاد</li>
-          <li>• استخدام أدوات نادرة</li>
+      <article className="rounded-xl border border-red-500/30 bg-red-900/10 p-6">
+        <h2 className="font-bold text-red-300">Urgent trigger أمثلة</h2>
+        <ul className="mt-3 space-y-2 text-sm text-gray-300">
+          <li>• Impact جارٍ: encryption/destruction/exfiltration/service outage.</li>
+          <li>• Privileged identity أو critical asset مع evidence مترابط.</li>
+          <li>• انتشار متعدد hosts أو lateral activity قيد التنفيذ.</li>
+          <li>• Safety/legal/regulatory trigger حسب الخطة.</li>
+          <li>• Loss of visibility متزامن مع adverse activity.</li>
         </ul>
-      </div>
+      </article>
+      <article className="rounded-xl border border-yellow-500/30 bg-yellow-900/10 p-6">
+        <h2 className="font-bold text-yellow-300">Prompt escalation أمثلة</h2>
+        <ul className="mt-3 space-y-2 text-sm text-gray-300">
+          <li>• Investigation تجاوز صلاحية L1 أو timebox.</li>
+          <li>• Evidence غير كافٍ لكن potential impact مرتفع.</li>
+          <li>• Action يحتاج owner/IR/legal/identity/cloud authority.</li>
+          <li>• Tool/telemetry failure يمنع القرار.</li>
+          <li>• Playbook conflict أو classification/TLP حساس.</li>
+        </ul>
+      </article>
     </div>
 
-    <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-      <h3 className="text-cyan-400 font-bold mb-4">📧 قالب رسالة تصعيد</h3>
-      <CodeBlock
-        title="Escalation Template"
-        code={`[ESCALATION] - [Severity] - Brief Description
+    <Alert type="info">Event 1102، tool-name match، foreign sign-in، reputation hit أو privileged username ترفع الأولوية، لكنها لا تثبت intent/compromise منفردة. اربط outcome/context/scope.</Alert>
 
-Summary: [وصف مختصر في سطرين]
-
-Affected Assets:
-- Host: ___
-- User: ___
-- IP: ___
-
-Timeline:
-- First seen: ___
-- Last activity: ___
-
-Evidence:
-- Alert IDs: ___
-- Log sources: ___
-- Key indicators: ___
-
-Initial Assessment: [تقييمك الأولي]
-Actions Taken: [ما فعلته حتى الآن]
-Recommended Next Steps: [ما تقترحه]`}
-      />
-    </div>
+    <CodeBlock title="Escalation handoff" language="text" code={`[ESCALATION] [Case ID] [Policy priority] — factual title
+Observed impact / urgency: ...
+Affected and searched scope: ...
+UTC timeline + source/event IDs: ...
+Facts vs hypotheses: ...
+Corroboration / competing explanation: ...
+Confidence and visibility gaps: ...
+Actions actually taken + authority + result: ...
+Decision/action requested, owner, deadline: ...
+Evidence location / handling label: ...`} />
   </div>
 );
 
@@ -192,7 +166,7 @@ export const SocKillChainSection = () => (
   <div className="space-y-8">
     <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3"><span>⚔️</span>Cyber Kill Chain</h1>
     <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
-    <Alert type="info">النموذج الشهير من Lockheed Martin يوضح مراحل الهجوم السبعة</Alert>
+    <Alert type="info">نموذج Lockheed Martin يصف سبع مراحل مفاهيمية. النشاط الواقعي قد يتخطى مراحل أو يكررها، كما أن النموذج أقل تفصيلًا لهجمات الهوية/السحابة؛ استخدمه للاتصال لا كدليل أن «المهاجم في مرحلة محددة».</Alert>
 
     <div className="space-y-3">
       {[
@@ -218,7 +192,7 @@ export const SocKillChainSection = () => (
     </div>
 
     <Alert type="golden" title="القيمة العملية">
-      كلما اكتشفت الهجوم مبكراً، كلما كان أسهل وأرخص. حدد: في أي مرحلة المهاجم؟ ما المرحلة التالية؟ كيف نوقفه؟
+      سمِّ evidence المرصود والـvisibility لكل مرحلة، ثم اسأل: ما السلوك التالي المحتمل وما control أو query التي تختبره؟ التدخل المبكر قد يقلل الأثر غالبًا، لكن التكلفة والقرار يعتمدان على السياق والسلطة.
     </Alert>
   </div>
 );
@@ -265,10 +239,10 @@ export const SocMitreSection = () => (
         {[
           { category: 'Initial Access', items: ['T1566 - Phishing (001: Attachment, 002: Link)', 'T1190 - Exploit Public-Facing App', 'T1078 - Valid Accounts'] },
           { category: 'Execution', items: ['T1059.001 - PowerShell', 'T1059.003 - Windows Command Shell', 'T1053 - Scheduled Task/Job', 'T1204 - User Execution'] },
-          { category: 'Persistence', items: ['T1547.001 - Registry Run Keys / Startup', 'T1053 - Scheduled Task/Job', 'T1543.003 - Windows Service', 'T1136 - Create Account'] },
-          { category: 'Credential Access', items: ['T1003.001 - LSASS Memory (Mimikatz)', 'T1110 - Brute Force', 'T1558.003 - Kerberoasting'] },
-          { category: 'Lateral Movement', items: ['T1021.001 - RDP', 'T1021.002 - SMB Admin Shares', 'T1550.002 - Pass the Hash'] },
-          { category: 'Defense Evasion', items: ['T1070.001 - Clear Event Logs', 'T1027 - Obfuscated Files', 'T1218 - LOLBins (Rundll32, Regsvr32, Mshta)'] },
+          { category: 'Persistence', items: ['T1547.001 - Registry Run Keys / Startup Folder', 'T1053 - Scheduled Task/Job', 'T1543.003 - Windows Service', 'T1136 - Create Account'] },
+          { category: 'Credential Access', items: ['T1003.001 - LSASS Memory', 'T1110 - Brute Force', 'T1558.003 - Kerberoasting'] },
+          { category: 'Lateral Movement', items: ['T1021.001 - RDP', 'T1021.002 - SMB/Windows Admin Shares', 'T1550.002 - Pass the Hash'] },
+          { category: 'Defense Evasion', items: ['T1070.001 - Clear Windows Event Logs', 'T1027 - Obfuscated/Compressed Files and Information', 'T1218.005/.010/.011 - Mshta/Regsvr32/Rundll32'] },
         ].map((cat, i) => (
           <div key={i} className="bg-gray-700/30 rounded-lg p-4">
             <h4 className="text-purple-400 font-bold text-sm mb-2">{cat.category}</h4>
@@ -281,13 +255,13 @@ export const SocMitreSection = () => (
     <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
       <h3 className="text-lg font-bold text-white mb-4">💡 كيف تستخدم MITRE في عملك اليومي</h3>
       <ol className="space-y-2 text-gray-300 text-sm">
-        <li>1. <strong>حدد السلوك:</strong> ماذا فعل المهاجم؟</li>
-        <li>2. <strong>ارجع للموقع:</strong> attack.mitre.org</li>
-        <li>3. <strong>ابحث عن التقنية:</strong> مثل "PowerShell" → T1059.001</li>
-        <li>4. <strong>اقرأ:</strong> Description, Mitigations, Detection</li>
-        <li>5. <strong>اكتب في تقريرك:</strong></li>
+        <li>1. <strong>صف observation:</strong> process/event/argument/outcome، لا اسم tool فقط.</li>
+        <li>2. <strong>افتح النسخة الحالية:</strong> اقرأ procedure examples وdata components والمنصات.</li>
+        <li>3. <strong>اختر أدق sub-technique:</strong> ولا تضف tactic غير مدعوم بهدف السلوك.</li>
+        <li>4. <strong>اربط evidence:</strong> event ID/query/time/entity مع كل mapping.</li>
+        <li>5. <strong>سجّل الحدود:</strong> mapping لا يثبت attribution ولا intent ولا نجاح action.</li>
       </ol>
-      <CodeBlock code={`MITRE ATT&CK Mapping:\n- Tactic: Execution (TA0002)\n- Technique: T1059.001 - PowerShell\n- Sub-technique: Used to execute encoded commands`} />
+      <CodeBlock language="text" code={`Observation: powershell.exe process creation with recorded command line\nEvidence: host / UTC / event ID / query\nATT&CK: T1059.001 — PowerShell\nWhy: PowerShell interpreter execution is observed\nNot claimed: payload success, maliciousness, actor attribution\nPossible additional mapping: T1027 only if obfuscation evidence meets its definition`} />
     </div>
   </div>
 );
@@ -317,7 +291,7 @@ export const SocPyramidSection = () => (
     </div>
 
     <Alert type="golden" title="الدرس العملي">
-      ركز على كشف <strong>TTPs و Tools</strong> بدل مطاردة IPs و Hashes. كشف TTP يقتل مجموعة هجوم كاملة!
+      لا تهمل IPs وhashes؛ هي سريعة ومفيدة للـscoping والاحتواء رغم قصر عمرها. استثمر أيضًا في كشف السلوك وTTPs لأنه أصعب تغييرًا غالبًا، لكن اختبر التغطية والـfalse positives: تطابق technique لا يثبت attribution ولا «يقضي» على مجموعة هجوم.
     </Alert>
   </div>
 );
@@ -373,15 +347,15 @@ export const SocThreatIntelSection = () => (
 
     <div className="grid md:grid-cols-4 gap-4">
       {[
-        { type: 'Strategic', who: 'للقيادة العليا', what: 'اتجاهات تهديدات عالية المستوى', color: 'purple' },
-        { type: 'Tactical', who: 'للمحللين', what: 'TTPs ومنهجيات الهجوم', color: 'blue' },
-        { type: 'Operational', who: 'عن حملات محددة', what: 'حملات هجوم قيد التنفيذ', color: 'orange' },
-        { type: 'Technical', who: 'IOCs محددة', what: 'IPs, domains, hashes', color: 'green' },
-      ].map((t, i) => (
-        <div key={i} className={`bg-${t.color}-900/20 rounded-xl p-4 border border-${t.color}-500/30`}>
-          <h3 className={`text-${t.color}-400 font-bold mb-2`}>{t.type}</h3>
-          <p className="text-gray-400 text-xs mb-1">{t.who}</p>
-          <p className="text-gray-300 text-sm">{t.what}</p>
+        { type: 'Strategic', who: 'للقيادة وصنّاع القرار', what: 'اتجاهات ومخاطر وimplications طويلة المدى' },
+        { type: 'Tactical', who: 'للدفاع والهندسة', what: 'TTPs وكيفية الكشف/التخفيف' },
+        { type: 'Operational', who: 'للاستجابة والتحقيق', what: 'سياق حملات أو عمليات محددة عند توفره' },
+        { type: 'Technical', who: 'للأدوات والمحللين', what: 'Observables مثل IP/domain/hash مع عمر وثقة' },
+      ].map((t) => (
+        <div key={t.type} className="rounded-xl border border-gray-700 bg-gray-800/50 p-4">
+          <h3 className="mb-2 font-bold text-cyan-300">{t.type}</h3>
+          <p className="mb-1 text-xs text-gray-400">{t.who}</p>
+          <p className="text-sm text-gray-300">{t.what}</p>
         </div>
       ))}
     </div>
@@ -390,11 +364,11 @@ export const SocThreatIntelSection = () => (
       <h3 className="text-lg font-bold text-white mb-4">🚦 TLP (Traffic Light Protocol)</h3>
       <div className="grid md:grid-cols-5 gap-2">
         {[
-          { name: 'TLP:RED', desc: 'لا تشارك خارج المحادثة', bg: 'bg-red-700' },
-          { name: 'TLP:AMBER+STRICT', desc: 'داخل فريق محدد فقط', bg: 'bg-amber-700' },
-          { name: 'TLP:AMBER', desc: 'داخل المنظمة فقط', bg: 'bg-amber-600' },
-          { name: 'TLP:GREEN', desc: 'مع الزملاء والشركاء', bg: 'bg-green-700' },
-          { name: 'TLP:CLEAR', desc: 'معلومات عامة', bg: 'bg-gray-600' },
+          { name: 'TLP:RED', desc: 'للمستلمين الأفراد فقط؛ بلا مشاركة إضافية', bg: 'bg-red-700' },
+          { name: 'TLP:AMBER+STRICT', desc: 'داخل منظمة المستلم فقط وبقدر الحاجة', bg: 'bg-amber-700' },
+          { name: 'TLP:AMBER', desc: 'المنظمة وعملاؤها المحتاجون للمعلومة لحماية أنفسهم', bg: 'bg-amber-600' },
+          { name: 'TLP:GREEN', desc: 'داخل المجتمع المعني؛ ليس في قنوات عامة', bg: 'bg-green-700' },
+          { name: 'TLP:CLEAR', desc: 'قابل للنشر العام مع الضوابط المعتادة', bg: 'bg-gray-600' },
         ].map((tlp, i) => (
           <div key={i} className={`${tlp.bg} rounded-lg p-3 text-center text-white`}>
             <p className="font-bold text-sm">{tlp.name}</p>
@@ -402,6 +376,7 @@ export const SocThreatIntelSection = () => (
           </div>
         ))}
       </div>
+      <p className="text-gray-300 text-xs mt-3">هذه تسميات FIRST TLP 2.0. يحددها المصدر ولا تخفّضها من نفسك. TLP يضبط نطاق المشاركة ولا يستبدل تصنيف المعلومات أو سياسة الاحتفاظ والسرية في المؤسسة.</p>
     </div>
 
     <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
@@ -422,38 +397,78 @@ export const SocThreatIntelSection = () => (
         ))}
       </div>
     </div>
+    <Alert type="danger" title="الاستعلام لا يعني الرفع">
+      راجع شروط المصدر وسياسة المؤسسة. في المنصات العامة قد تُشارك الملفات أو URLs أو metadata مع أطراف أخرى. ابدأ بالـhash/observable فقط إذا كان مصرحًا، ولا تنشر نتيجة reputation كحكم أو attribution.
+    </Alert>
   </div>
 );
 
 // === SIEM Section ===
 export const SocSIEMSection = () => (
   <div className="space-y-8">
-    <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3"><span>📊</span>SIEM للمحلل</h1>
-    <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
+    <h1 className="text-3xl font-bold text-cyan-400">📊 SIEM للمحلل</h1>
+    <Alert type="info" title="SIEM ليس صندوق كشف سحري">
+      يجمع ويبحث ويربط telemetry حسب connectors/parsers/licensing/retention. نتيجة query صحيحة نحويًا قد تكون خاطئة تحليليًا إذا كانت الحقول ناقصة أو الساعة/النطاق غير صحيحين.
+    </Alert>
 
-    <Alert type="info">نظام يجمع logs من مصادر متعددة ويحللها للكشف عن تهديدات</Alert>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">Pipeline يجب أن تفهمه</h2>
+      <CodeBlock language="text" code={`Source clock/event → agent/collector → queue → parser/normalization
+→ index/table + retention → detection schedule → alert/case → analyst`} />
+      <Table headers={['فحص', 'سؤال']} rows={[
+        ['Freshness', 'ما الفرق بين event time وingestion time؟'],
+        ['Completeness', 'هل كل expected hosts/categories ترسل؟ gaps/loss؟'],
+        ['Parsing', 'هل raw value وصل للحقل الصحيح أم صار null/mis-typed؟'],
+        ['Uniqueness', 'هل retries/forwarders صنعوا duplicates؟ ما event identifier؟'],
+        ['Retention/access', 'هل النافذة متاحة وهل RBAC أخفى مصادر؟'],
+        ['Detection state', 'rule version/window/lookback/suppression/last run؟'],
+      ]} />
+    </section>
 
-    <div className="grid md:grid-cols-2 gap-4">
-      <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-        <h3 className="text-cyan-400 font-bold mb-4">💰 المدفوعة</h3>
-        <ul className="text-gray-300 text-sm space-y-2">
-          {['Splunk Enterprise Security (الأشهر)', 'IBM QRadar', 'Microsoft Sentinel', 'ArcSight', 'LogRhythm', 'Exabeam'].map((s, i) => <li key={i}>• {s}</li>)}
-        </ul>
-      </div>
-      <div className="bg-green-900/20 rounded-xl p-6 border border-green-500/30">
-        <h3 className="text-green-400 font-bold mb-4">🆓 المجانية / Open Source</h3>
-        <ul className="text-gray-300 text-sm space-y-2">
-          {['Wazuh (الأفضل مجاناً)', 'Elastic Security (ELK)', 'Security Onion', 'Graylog'].map((s, i) => <li key={i}>• {s}</li>)}
-        </ul>
-      </div>
-    </div>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">KQL: query قابلة للتفسير</h2>
+      <CodeBlock title="Microsoft Sentinel / SecurityEvent — تحقق من schema في workspace" language="kusto" code={`let start = ago(24h);
+let finish = now();
+SecurityEvent
+| where TimeGenerated >= start and TimeGenerated < finish
+| where EventID == 4625
+| project TimeGenerated, Computer, Account, IpAddress, LogonType, Activity
+| summarize Failures=count(), FirstSeen=min(TimeGenerated), LastSeen=max(TimeGenerated),
+            Hosts=dcount(Computer)
+  by Account, IpAddress
+| order by Failures desc`} />
+      <CodeBlock title="Network logon candidates — ليس verdict lateral movement" language="kusto" code={`SecurityEvent
+| where TimeGenerated >= ago(24h)
+| where EventID == 4624 and LogonType == 3
+| summarize Events=count(), Destinations=dcount(Computer),
+            FirstSeen=min(TimeGenerated), LastSeen=max(TimeGenerated)
+  by Account, IpAddress
+| order by Destinations desc`} />
+      <p className="text-sm leading-7 text-gray-300">LogonType 3 يشمل نشاطًا شرعيًا كثيرًا. اربط source host/process و4648 وservice/task/SMB/WinRM/RDP والتغيير والـbaseline. لا تختر threshold اعتباطيًا؛ قِس distribution واختبر labeled fixtures.</p>
+    </section>
 
-    <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-      <h3 className="text-lg font-bold text-white mb-4">أمثلة Queries</h3>
-      <CodeBlock title="Splunk - Failed logons" code={`index=windows EventCode=4625 ComputerName="WORKSTATION01"\n| stats count by Account_Name, Source_Network_Address\n| sort -count`} />
-      <CodeBlock title="KQL (Sentinel) - Failed logons" code={`SecurityEvent\n| where EventID == 4625\n| summarize count() by Account, IpAddress\n| sort by count_ desc`} />
-      <CodeBlock title="KQL - Lateral Movement" code={`SecurityEvent\n| where EventID == 4624 and LogonType == 3\n| summarize count() by Account, Computer, IpAddress\n| where count_ > 5`} />
-    </div>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">Portability بدل حفظ syntax</h2>
+      <Table headers={['نية query', 'KQL', 'Splunk SPL concept']} rows={[
+        ['Scope time/source', 'table + where TimeGenerated', 'index/sourcetype + earliest/latest'],
+        ['Filter', 'where', 'search / where'],
+        ['Select fields', 'project', 'fields / table'],
+        ['Aggregate', 'summarize ... by', 'stats ... by'],
+        ['Order/limit', 'order by / top', 'sort / head'],
+      ]} />
+      <Alert type="warning">أسماء fields ليست موحدة بين connector وproduct/version. افتح raw event، اعرض sample schema، ثم اختبر nulls/types قبل نسخ query.</Alert>
+    </section>
+
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">Evidence لأي hunt</h2>
+      <CodeBlock language="text" code={`Question/hypothesis: ...
+Platform + table/index + query version: ...
+UTC window [start, end) and ingestion delay: ...
+Sources expected / present / absent: ...
+Results + sampled raw records + IDs: ...
+False-positive alternatives and missing telemetry: ...
+Decision/confidence/next step: ...`} />
+    </section>
   </div>
 );
 
@@ -464,12 +479,12 @@ export const SocAlertsSection = () => (
     <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
 
     {[
-      { name: 'Multiple Failed Logons', icon: '🔓', indicators: 'Event 4625 متكرر | نفس المستخدم أو IP', steps: ['كم محاولة وفي أي مدة؟', 'من نفس IP أم متعدد؟', 'هل نجحت أي محاولة بعدها؟', 'هل IP من بلد معتاد؟'], decision: 'نجحت بعد الفشل = TP حرج | كلها فاشلة من IP خارجي = TP حظر | المستخدم نسي = BP' },
-      { name: 'Suspicious PowerShell', icon: '💻', indicators: 'Event 4104 بـ encoded | Sysmon Event 1 بـ command غريب', steps: ['فك encoded command', 'ما هو parent process؟', 'ما هو user context؟', 'هل اتصل بالإنترنت؟'], decision: 'DownloadString/IEX = TP صعّد | Admin Script شرعي = FP' },
-      { name: 'Suspicious Outbound', icon: '🌐', indicators: 'اتصال لـ IP في threat feed | domain مشبوه | منفذ غير معتاد', steps: ['ما العملية المرتبطة؟', 'حجم البيانات المنقولة؟', 'تكرار الاتصال (beaconing)؟', 'تحقق من سمعة IP/Domain'], decision: 'IP خبيث مؤكد = TP حرج | Beaconing = TP صعّد | عادي = FP' },
-      { name: 'New Account Created', icon: '👤', indicators: 'Event 4720', steps: ['من أنشأ الحساب؟', 'هل المنشئ admin شرعي؟', 'متى تم الإنشاء (وقت دوام؟)', 'ما صلاحيات الحساب الجديد؟'], decision: 'admin شرعي في دوام = BP | حساب مخترق = TP حرج' },
-      { name: 'Service Installation', icon: '⚙️', indicators: 'Event 7045/4697', steps: ['اسم الخدمة', 'مسار الملف التنفيذي', 'هل معروفة؟', 'هل الملف موقّع؟'], decision: 'PSEXESVC = PsExec! | اسم عشوائي = مشبوه | من /tmp = حرج' },
-      { name: 'Security Log Cleared', icon: '🗑️', indicators: 'Event 1102', steps: ['من مسح؟', 'متى؟', 'ما النشاط قبل المسح؟'], decision: 'دائماً TP حرج! صعّد فوراً' },
+      { name: 'Multiple Failed Logons', icon: '🔓', indicators: 'Event 4625 متكرر | نفس المستخدم أو IP', steps: ['كم محاولة وفي أي مدة؟', 'من نفس IP أم متعدد؟', 'هل حدث نجاح لنفس الحساب/المصدر؟', 'هل المصدر VPN/proxy/scanner معروف؟'], decision: 'صنّف بعد ربط النجاح والجهاز ونوع Logon والـbaseline. الفشل الخارجي لا يعني حظرًا تلقائيًا؛ اتبع threshold وplaybook.' },
+      { name: 'Suspicious PowerShell', icon: '💻', indicators: 'Event 4104 فيه encoding أو download | Sysmon Event 1 بسلسلة غير معتادة', steps: ['فك النص كبيانات دون تنفيذه', 'ما parent/child process؟', 'ما user/host والسياق؟', 'هل توجد شبكة أو ملفات أو persistence؟'], decision: 'IEX/DownloadString ترفع الشك ولا تثبت الضرر؛ قارن بالتوقيع والمسار والسياسة والتغيير المعتمد ثم صعّد بالأدلة.' },
+      { name: 'Suspicious Outbound', icon: '🌐', indicators: 'تطابق feed | domain حديث | دورية أو حجم غير معتاد', steps: ['ما العملية والجهاز؟', 'ما DNS/SNI والبيانات المنقولة؟', 'هل الدورية آلية شرعية؟', 'ما عمر وثقة مؤشر السمعة؟'], decision: 'IOC أو beaconing قرينة لا verdict. صعّد عند اجتماع سياق endpoint وشبكة وتهديد؛ سجّل فجوات الرؤية.' },
+      { name: 'New Account Created', icon: '👤', indicators: 'Event 4720', steps: ['من أنشأ الحساب؟', 'هل توجد تذكرة تغيير؟', 'ما الزمن ونطاق الأصل؟', 'ما المجموعات والنشاط اللاحق؟'], decision: 'وجود admin ووقت دوام لا يثبت الشرعية. تحقق من الطلب والمالك؛ creation غير المصرح مع privilege أو نشاط لاحق يرفع الأولوية.' },
+      { name: 'Service Installation', icon: '⚙️', indicators: 'System 7045 أو Security 4697 عند تفعيل auditing', steps: ['اسم الخدمة والمسار والحساب', 'hash/signature/prevalence', 'parent والناشر والتغيير المعتمد', 'اتصالات ونشاط تالٍ'], decision: 'PSEXESVC قد يكون إدارة شرعية أو حركة جانبية. الاسم/المسار وحده لا يكفي؛ قرر بالسياق والسلوك.' },
+      { name: 'Security Log Cleared', icon: '🗑️', indicators: 'Event 1102 في سجل Security', steps: ['أي حساب وجهاز؟', 'هل صيانة معتمدة؟', 'ما الأحداث والعمليات قبلها؟', 'هل بقيت نسخة مركزية وهل مسحت سجلات أخرى؟'], decision: 'حدث عالي الحساسية لكنه ليس TP دائمًا. ارفع الأولوية وصعّد وفق playbook بعد التحقق من الصيانة والسياق.' },
     ].map((alert, i) => (
       <div key={i} className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
         <h3 className="text-lg font-bold text-white mb-4">{alert.icon} Alert {i + 1}: {alert.name}</h3>
@@ -495,32 +510,57 @@ export const SocAlertsSection = () => (
 // === NIST IR Lifecycle ===
 export const SocNISTSection = () => (
   <div className="space-y-8">
-    <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3"><span>📜</span>NIST Incident Response Lifecycle</h1>
+    <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3"><span>📜</span>NIST Incident Response — SP 800-61 Rev. 3</h1>
     <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
-    <Alert type="info">المرجع: NIST SP 800-61 Rev 2</Alert>
+    <Alert type="info" title="النسخة الحالية">
+      صدر NIST SP 800-61 Rev. 3 نهائيًا في أبريل 2025 وحل محل Rev. 2. لم يعد النموذج الرسمي قائمة مراحل خطية مستقلة؛ بل يدمج الاستجابة للحوادث في وظائف NIST CSF 2.0 الست. قد تسمع في المقابلة أسماء Rev. 2 القديمة، لذلك افهم الربط ولا تدّعِ أنها مراحل Rev. 3.
+    </Alert>
 
-    <div className="space-y-4">
-      {[
-        { num: 1, name: 'Preparation (التحضير)', items: ['بناء فريق IR', 'إعداد الأدوات', 'بناء Playbooks', 'التدريب', 'إنشاء Communication channels'] },
-        { num: 2, name: 'Detection & Analysis (الكشف والتحليل)', items: ['مراقبة alerts', 'جمع المعلومات', 'تحديد ما إذا كانت حادثة فعلية', 'تحديد scope ابتدائي', 'تحديد severity'] },
-        { num: 3, name: 'Containment (الاحتواء)', items: ['Short-term: عزل الأجهزة، حظر IPs، تعطيل حسابات', 'Long-term: إعداد بيئة نظيفة، تطبيق patches', 'توثيق كل خطوة'] },
-        { num: 4, name: 'Eradication (الإزالة)', items: ['إزالة البرمجية الخبيثة', 'إزالة persistence', 'إزالة الحسابات الوهمية', 'معالجة الثغرات'] },
-        { num: 5, name: 'Recovery (الاستعادة)', items: ['إعادة الأنظمة للعمل', 'مراقبة مكثفة', 'التحقق من السلامة', 'استعادة من backups إذا لزم'] },
-        { num: 6, name: 'Post-Incident (الدروس المستفادة)', items: ['اجتماع post-mortem', 'توثيق الدروس', 'تحديث Playbooks', 'تحسين الكشف', 'تقرير نهائي'] },
-      ].map((phase) => (
-        <div key={phase.num} className="bg-gray-800/50 rounded-xl p-5 border border-gray-700 flex items-start gap-4">
-          <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-xl flex-shrink-0">{phase.num}</div>
-          <div>
-            <h3 className="text-lg font-bold text-white">{phase.name}</h3>
-            <ul className="text-gray-300 text-sm mt-2 space-y-1">{phase.items.map((item, i) => <li key={i}>• {item}</li>)}</ul>
-          </div>
-        </div>
-      ))}
-    </div>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">الخريطة التي تعمل بها</h2>
+      <div className="grid md:grid-cols-2 gap-4">
+        {[
+          { name: 'GOVERN + IDENTIFY + PROTECT', role: 'دعم الاستعداد والتحسين المستمر', items: ['سياسة وصلاحيات واتصالات ومورّدون', 'أصول ومخاطر واعتماديات وبيانات مهمة', 'هويات وحماية بيانات وصيانة ومرونة', 'تُنفذ قبل الحادث وتتحسن بعده'] },
+          { name: 'DETECT', role: 'العثور على الحدث وتحليله', items: ['Continuous Monitoring (DE.CM)', 'Adverse Event Analysis (DE.AE)', 'ربط مصادر وتقدير النطاق والأثر', 'تقرير هل الحدث Incident وفق معايير المؤسسة'] },
+          { name: 'RESPOND', role: 'إدارة الحادث وتقليل أثره', items: ['Incident Management (RS.MA)', 'Incident Analysis (RS.AN)', 'Reporting & Communication (RS.CO)', 'Incident Mitigation (RS.MI): احتواء وإزالة حسب الخطة'] },
+          { name: 'RECOVER', role: 'استعادة التشغيل بأمان', items: ['Incident Recovery Plan Execution (RC.RP)', 'Incident Recovery Communication (RC.CO)', 'التحقق من السلامة والمراقبة بعد الاستعادة', 'إدخال الدروس في Identify/Improve والسياسات'] },
+        ].map((phase) => <div key={phase.name} className="bg-gray-800/50 rounded-xl p-5 border border-gray-700"><h3 dir="ltr" className="text-cyan-300 font-bold">{phase.name}</h3><p className="text-white text-sm mt-1">{phase.role}</p><ul className="text-gray-300 text-sm mt-3 space-y-1">{phase.items.map(item => <li key={item}>• {item}</li>)}</ul></div>)}
+      </div>
+    </section>
+
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">ترجمة المصطلحات القديمة بلا خلط</h2>
+      <Table headers={['ما ستسمعه', 'مكانه العملي في Rev. 3', 'مثال']} rows={[
+        ['Preparation', 'Govern/Identify/Protect مع التحسين', 'قائمة أصول، logging، playbooks، صلاحيات اتصال وتمارين'],
+        ['Detection & Analysis', 'Detect ثم Respond/Analysis', 'تجميع أدلة، إعلان Incident، scope وتأثير'],
+        ['Containment', 'Respond/Mitigation', 'عزل host أو revoke session بإذن وبأقل أثر'],
+        ['Eradication', 'Respond/Mitigation + Analysis', 'إزالة persistence، معالجة السبب والتحقق من بقية النطاق'],
+        ['Recovery', 'Recover', 'استعادة مرحلية ومعايير دخول/رجوع ومراقبة'],
+        ['Lessons Learned', 'تحسين مستمر عبر جميع الوظائف', 'سد telemetry gap وتحديث rule/playbook/risk register'],
+      ]} />
+    </section>
+
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">ما يفعله SOC L1 عند Incident محتمل</h2>
+      <ol className="space-y-3 text-gray-300">
+        {[
+          'سجّل alert ID والوقت والمنطقة الزمنية والمصدر؛ لا تغيّر الأصل.',
+          'تحقق من صحة البيانات والـasset/user ثم افصل الحقائق عن الفرضيات.',
+          'ابحث عن نفس الكيان قبل/بعد الحدث وحدد نطاقًا أوليًا وثغرات الرؤية.',
+          'طبّق severity وincident criteria وSLA الخاصة بالمؤسسة، لا معيارًا اخترعته.',
+          'صعّد بقصة قصيرة: ماذا حدث، من/أين/متى، الدليل، الأثر المحتمل، ما لم يُعرف، والخطوة المقترحة.',
+          'لا تعزل أو تحظر أو تعطل حسابًا إلا إذا فوضك playbook؛ وثّق صاحب القرار والوقت والنتيجة.',
+        ].map((item, i) => <li key={item} className="bg-gray-800/50 border border-gray-700 rounded-lg p-3"><strong className="text-cyan-300 ml-2">{i + 1}.</strong>{item}</li>)}
+      </ol>
+      <Alert type="warning" title="ليست دورة سهم واحد">
+        قد تبدأ استعادة خدمة بينما يستمر تحليل النطاق، وقد يعيد دليل جديد الفريق إلى Detect أو Respond. النجاح هو قرارات مخوّلة ودليل محفوظ وتقليل أثر وتعافٍ متحقق منه، لا المرور على ست خانات بالترتيب.
+      </Alert>
+    </section>
   </div>
 );
 
 // === Phishing Investigation ===
+
 export const SocPhishingSection = () => (
   <div className="space-y-8">
     <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3"><span>🎣</span>Phishing Investigation</h1>
@@ -531,7 +571,7 @@ export const SocPhishingSection = () => (
         { name: 'Spear Phishing', desc: 'موجه لشخص محدد' },
         { name: 'Whaling', desc: 'موجه لمسؤولين كبار' },
         { name: 'Clone Phishing', desc: 'نسخ إيميل شرعي وتعديله' },
-        { name: 'BEC', desc: 'انتحال هوية مدير' },
+        { name: 'BEC', desc: 'احتيال تجاري عبر بريد منتحل أو حساب مخترق؛ قد لا يحوي رابطًا أو ملفًا' },
       ].map((t, i) => (
         <div key={i} className="bg-gray-800/50 rounded-lg p-4 border border-gray-700 text-center">
           <p className="text-cyan-400 font-bold text-sm">{t.name}</p>
@@ -540,16 +580,20 @@ export const SocPhishingSection = () => (
       ))}
     </div>
 
+    <Alert type="danger" title="قاعدة السلامة والخصوصية">
+      لا تنقر ولا تفتح ولا تفك مرفقًا على جهازك اليومي. لا ترفع الرسالة أو الملف أو URL داخليًا إلى VirusTotal أو URLscan أو sandbox عامة؛ الإرسال العام قد يكشف المحتوى والوجهات. ابدأ بالـheaders وhash في بيئة معتمدة، ولا تنفذ dynamic analysis إلا في sandbox مؤسسية معزولة وبصلاحية.
+    </Alert>
+
     <div className="space-y-4">
       {[
-        { step: 1, title: 'لا تفتح المرفقات!', desc: 'استخدم Sandbox (any.run, hybrid-analysis) أو VM معزولة' },
-        { step: 2, title: 'تحقق من Headers', desc: 'Return-Path, From vs Reply-To, SPF/DKIM/DMARC results. مختلفين = مشبوه' },
-        { step: 3, title: 'تحليل Sender', desc: 'Domain مسجل حديثاً؟ Typosquatting؟ معروف من قبل؟' },
-        { step: 4, title: 'تحليل المحتوى', desc: 'إلحاح شديد، تهديد، إغراء، أخطاء إملائية، ترجمة سيئة، تحية عامة' },
-        { step: 5, title: 'تحليل الروابط', desc: 'لا تنقر! مرر الماوس. استخدم VirusTotal, URLscan.io. ابحث عن typosquatting' },
-        { step: 6, title: 'تحليل المرفقات', desc: 'احسب hash → VirusTotal. فكّ ZIPs في sandbox. انتبه لـ macros و امتدادات مزدوجة (.pdf.exe)' },
-        { step: 7, title: 'ابحث عن إيميلات مماثلة', desc: 'نفس Sender/Subject/Hash/URLs. كم مستخدم استلم؟ كم نقر؟' },
-        { step: 8, title: 'الإجراءات', desc: 'حذف من inboxes. حظر Sender/URLs. إضافة hashes لـ blocklist. إعادة تعيين كلمات مرور' },
+        { step: 1, title: 'احفظ الأصل والنطاق', desc: 'سجّل message ID والوقت والمنطقة الزمنية والمبلّغ؛ احفظ .eml وفق السياسة، واعمل على نسخة. اسأل: هل نقر أو أدخل credentials أو فتح الملف؟' },
+        { step: 2, title: 'افهم Headers', desc: 'اقرأ Received من الأسفل للأعلى بحذر، From/Reply-To/Return-Path وAuthentication-Results. اختلاف الحقول قد يكون شرعيًا؛ الأهم SPF وDKIM ثم DMARC alignment والسياق.' },
+        { step: 3, title: 'حلل الهوية والنطاق', desc: 'قارن الاسم والعنوان وReply-To، Unicode/typosquatting، عمر النطاق عند السماح، والمراسلات السابقة. Display name وحده لا يثبت المرسل.' },
+        { step: 4, title: 'حلل الطلب لا الأسلوب فقط', desc: 'ما الإجراء المطلوب: دفع، credential، OAuth consent، تغيير حساب بنكي؟ تحقق من الطلب بقناة مستقلة معروفة؛ الأخطاء أو الإلحاح قرائن ضعيفة ويمكن أن توجد في بريد شرعي.' },
+        { step: 5, title: 'استخرج الروابط بلا زيارة', desc: 'استخرج القيمة نصيًا، وسّع redirect فقط بأداة مؤسسية، وقارن host وpunycode. ابحث عن domain/URL في منصة معتمدة دون إرسال بيانات حساسة.' },
+        { step: 6, title: 'حلل المرفق بأقل تعرض', desc: 'سجّل الاسم والحجم والنوع الحقيقي واحسب SHA-256 محليًا. ابحث عن الـhash فقط أولًا. لا تفك archive أو تشغّل macro إلا في sandbox خاصة معزولة وبإذن.' },
+        { step: 7, title: 'Scope وimpact', desc: 'ابحث بـmessage ID/sender/subject/domain/hash: من استلم؟ هل سُلّم أو حُذف؟ من نقر أو سجّل دخولًا؟ راجع sign-ins وmailbox rules وOAuth عند الاشتباه بالهوية.' },
+        { step: 8, title: 'قرار واستجابة مخوّلة', desc: 'وثّق facts وconfidence. نفّذ purge/block/session revoke/reset فقط عبر playbook وصاحب صلاحية؛ اختبر أثر الحظر لأن shared hosting وdomains الشرعية قد تتضرر.' },
       ].map((s) => (
         <div key={s.step} className="bg-gray-800/50 rounded-xl p-5 border border-gray-700 flex items-start gap-4">
           <div className="w-10 h-10 rounded-full bg-orange-600 flex items-center justify-center text-white font-bold flex-shrink-0">{s.step}</div>
@@ -566,56 +610,73 @@ export const SocPhishingSection = () => (
 // === EDR/XDR Section ===
 export const SocEDRSection = () => (
   <div className="space-y-8">
-    <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3"><span>🔬</span>EDR و XDR للمحلل</h1>
-    <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
+    <h1 className="text-3xl font-bold text-cyan-400">🔬 EDR وXDR للمحلل</h1>
+    <Alert type="warning" title="الاسم لا يضمن coverage">
+      EDR visibility تختلف حسب OS/sensor version/policy/licensing/network health/tamper state/retention. XDR مصطلح سوقي يربط مصادر متعددة بدرجات مختلفة. تحقق من data الفعلية بدل افتراض «يرى كل شيء».
+    </Alert>
 
-    <div className="grid md:grid-cols-2 gap-4">
-      <div className="bg-blue-900/20 rounded-xl p-6 border border-blue-500/30">
-        <h3 className="text-blue-400 font-bold mb-4">🖥️ EDR (Endpoint Detection & Response)</h3>
-        <p className="text-gray-300 text-sm mb-4">أداة على كل جهاز تجمع: Process executions, File operations, Network connections, Registry changes, Memory operations</p>
-        <h4 className="text-cyan-400 font-bold text-sm mb-2">أشهر EDRs:</h4>
-        <ul className="text-gray-300 text-xs space-y-1">
-          {['CrowdStrike Falcon', 'Microsoft Defender for Endpoint', 'SentinelOne', 'Carbon Black (VMware)', 'Cortex XDR (Palo Alto)', 'Cybereason'].map((e, i) => <li key={i}>• {e}</li>)}
-        </ul>
-      </div>
-      <div className="bg-purple-900/20 rounded-xl p-6 border border-purple-500/30">
-        <h3 className="text-purple-400 font-bold mb-4">🌐 XDR (Extended Detection & Response)</h3>
-        <p className="text-gray-300 text-sm mb-4">يجمع EDR + Email + Network + Cloud + Identity. رؤية شاملة عبر طبقات متعددة.</p>
-        <h4 className="text-cyan-400 font-bold text-sm mb-2">مهارات EDR للمحلل:</h4>
-        <ul className="text-gray-300 text-xs space-y-1">
-          {['قراءة Process Tree (Parent→Children)', 'Timeline Analysis', 'Threat Hunting Queries', 'Containment (عزل، إنهاء عمليات)', 'Forensic Collection (memory dump)'].map((s, i) => <li key={i}>• {s}</li>)}
-        </ul>
-      </div>
-    </div>
+    <Table headers={['قد يوفر', 'سؤال التحقق']} rows={[
+      ['Process tree/command/signature', 'هل sensor بدأ قبل الحدث؟ command line كاملة؟ PID reuse؟'],
+      ['File create/write/hash/quarantine', 'هل كل filesystem/archives covered؟ ما action/result؟'],
+      ['Network metadata', 'DNS/SNI/remote endpoint؟ هل traffic قبل sensor أو داخل container؟'],
+      ['Identity/logon context', 'Local أم Entra/AD؟ token/session mapping صحيح؟'],
+      ['Response actions: isolate/kill/quarantine/collect', 'من مخول؟ ما exclusions/rollback/business impact؟'],
+    ]} />
+
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">Process tree checklist</h2>
+      <CodeBlock language="text" code={`Host + sensor health/version + UTC
+Process GUID/entity ID + PID + start time
+Image path/hash/signature/version/user/integrity
+Parent GUID/path/arguments and children
+File/network/registry/module events with outcomes
+Prevalence/baseline/change/owner
+Alert logic and raw event IDs
+Gaps + competing hypotheses + confidence`} />
+      <p className="leading-8 text-gray-300">Parent-child غير المعتاد signal فقط؛ updaters، deployment tools وassistive software قد تصنع trees غريبة. لا تعتمد screenshot؛ صدّر IDs/queries ضمن السياسة.</p>
+    </section>
+
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">Response action gate</h2>
+      <ol className="space-y-2 text-sm leading-7 text-gray-300">
+        <li>1. اربط case وasset criticality وscope والثقة.</li>
+        <li>2. تحقق من authority ومن معنى action في المنتج.</li>
+        <li>3. احفظ volatile/remote evidence المطلوب قبل action إن سمح الوقت والخطة.</li>
+        <li>4. قيّم management path، cluster، user safety وbusiness impact.</li>
+        <li>5. نفذ أقل action لازم، سجل actor/time/request ID.</li>
+        <li>6. تحقق من النتيجة والمضاعفات وخطة rollback/reconnect.</li>
+      </ol>
+      <Alert type="danger">Isolate قد يبقي قنوات إدارة vendor أو يستثني traffic؛ kill/quarantine قد يفشل أو يزيل artifact. لا تكتب «تم الاحتواء» من click؛ تحقق من state وtelemetry.</Alert>
+    </section>
   </div>
 );
 
 // === SOC Checklist Section ===
 export const SocChecklistSection = () => {
   const items = [
-    'أعرف 50+ مصطلح SOC بالإنجليزية', 'أفهم مستويات Tier 1, 2, 3', 'أعرف Alert Lifecycle كاملاً',
-    'أفهم True/False/Benign Positive', 'أعرف SLA و KPIs الأساسية', 'أفهم Cyber Kill Chain وأطبقه',
-    'أعرف Pyramid of Pain', 'أعرف Diamond Model', 'أتقن MITRE ATT&CK (10+ techniques)',
-    'أعرف NIST IR Lifecycle', 'أعمل Triage في أقل من 15 دقيقة', 'أحدد متى أصعّد',
-    'أكتب Incident Report محترف', 'أحلل Phishing email كامل', 'أتعامل مع IOCs بشكل صحيح',
-    'أستخدم Wazuh بشكل أساسي', 'أكتب queries بـ KQL أو SPL', 'أستخدم VirusTotal و OTX',
-    'أبني MITRE mapping لأي سيناريو', 'أحقق في Brute Force', 'أحقق في Suspicious PowerShell',
-    'أحقق في Lateral Movement', 'أحقق في Phishing', 'رفعت 6+ تطبيقات على GitHub',
+    'أشرح مصطلحات SOC الأساسية بالعربية والإنجليزية داخل تحقيق', 'أفهم أن توزيع Tier 1/2/3 يختلف بين المؤسسات', 'أشرح Alert Lifecycle كاملاً',
+    'أفصل True/False/Benign Positive عن severity', 'أطبق SLA وKPIs المؤسسة دون التلاعب بالمقياس', 'أستخدم Cyber Kill Chain عندما يناسب السؤال',
+    'أشرح Pyramid of Pain وحدوده', 'أستخدم Diamond Model كأداة تحليل لا كإثبات', 'أربط السلوك بتقنيات MITRE الصحيحة مع الدليل',
+    'أشرح تكامل NIST SP 800-61 Rev. 3 مع CSF 2.0', 'أنجز Triage ضمن SLA اللاب مع الحفاظ على الجودة', 'أحدد متى ولماذا أصعّد',
+    'أكتب Incident Report يميز facts والفرضيات', 'أحلل Phishing email بأمان', 'أتعامل مع IOC كقرينة لها ثقة وعمر',
+    'أستخدم Wazuh وأتحقق من ingestion', 'أكتب وأشرح queries بـ KQL ثم أنقل المنطق لأداة أخرى', 'أستعلم من threat intel دون رفع بيانات حساسة',
+    'أبني MITRE mapping لسلوك مدعوم بالدليل', 'أحقق في Brute Force', 'أحقق في Suspicious PowerShell',
+    'أحقق في Lateral Movement', 'أحقق في Phishing', 'نشرت مشاريع قليلة عميقة منزوعة الحساسية مع أدلة اختبار',
   ];
 
   const deliverables = [
     'triage-exercise-01.md', 'investigation-report-01.md', 'mitre-mapping-exercise.md',
-    'wazuh-deployment.md مع screenshots', 'phishing-analysis-01.md', 'ioc-hunt-01.md',
+    'wazuh-e2e-validation.md مع screenshots منقحة وقياسات ingestion', 'phishing-analysis-fixture-01.md', 'ioc-hunt-01.md',
     'soc-terminology-cheatsheet.md', 'incident-report-template.md', 'escalation-template.md',
   ];
 
   const interviewQA = [
-    { q: 'ما الفرق بين IDS و IPS؟', a: 'IDS يكشف ويُنبّه. IPS يكشف ويحظر تلقائياً.' },
-    { q: 'ما الفرق بين SIEM و SOAR؟', a: 'SIEM يجمع ويحلل logs. SOAR يضيف automation و orchestration.' },
-    { q: 'ما الفرق بين EDR و XDR؟', a: 'EDR على endpoints فقط. XDR يشمل endpoints + network + email + cloud.' },
-    { q: 'كيف تكشف Lateral Movement؟', a: 'Event 4624 Type 3 بين أجهزة، Event 4648، Event 7045 (PSEXESVC)' },
-    { q: 'ما هي أهمية Pyramid of Pain؟', a: 'ركز على TTPs و Tools بدل مطاردة IPs و Hashes' },
-    { q: 'ما هي علامات Ransomware؟', a: 'ملفات بامتدادات غريبة، ransom notes، Volume Shadow Copy deletion' },
+    { q: 'ما الفرق بين IDS و IPS؟', a: 'IDS يراقب ويولد اكتشافات عادةً؛ IPS يكون غالبًا inline ويمكنه المنع وفق السياسة. الاسم لا يضمن الدقة أو أن كل alert حُظر.' },
+    { q: 'ما الفرق بين SIEM و SOAR؟', a: 'SIEM يركز على جمع/تطبيع/بحث/ربط telemetry؛ SOAR ينسق الأدوات وcase workflow وplaybooks الآلية. المنتجات قد تتداخل.' },
+    { q: 'ما الفرق بين EDR و XDR؟', a: 'EDR يركز على endpoint telemetry والاستجابة. XDR تسمية منتج لربط endpoint بهوية/بريد/شبكة/سحابة؛ النطاق الفعلي يختلف حسب المورد والترخيص.' },
+    { q: 'كيف تكشف Lateral Movement؟', a: 'أبني baseline ثم أربط remote logon والهوية والمصدر والوجهة والبروتوكول والعملية: مثل 4624/LogonType 3، 4648، SMB/RDP/WinRM وservice/task creation. لا يكفي Event ID منفرد.' },
+    { q: 'ما أهمية Pyramid of Pain؟', a: 'يساعد على موازنة مؤشرات سريعة قصيرة العمر مع detections سلوكية أصعب تغييرًا؛ لا يلغي hashes/IPs ولا يجعل TTP attribution يقينيًا.' },
+    { q: 'ما علامات Ransomware؟', a: 'معدل تعديل/إعادة تسمية مرتفع، notes، حذف recovery artifacts، عمليات غير معتادة ووصول واسع للملفات. أتحقق من السياق لأن كل علامة منفردة قد تكون إدارية.' },
   ];
 
   return (
@@ -643,9 +704,9 @@ export const SocChecklistSection = () => {
         ))}</div>
       </section>
 
-      <Alert type="golden" title="القاعدة الذهبية">
-        <p className="text-xl font-bold">كمحلل SOC أنت: Detective 🔍 + Communicator 📢 + Decision Maker ⚡ + Documenter 📝</p>
-        <p className="mt-2">النجاح ليس عن كم تعرف، بل عن: كم سريع تتفاعل، كم دقيق تحلل، كم واضح توثّق!</p>
+      <Alert type="golden" title="بوابة النجاح">
+        <p className="text-xl font-bold">Observe 🔍 → Reason 🧠 → Communicate 📢 → Document 📝</p>
+        <p className="mt-2">السرعة مهمة داخل SLA، لكن لا تُشترى بالدقة أو السلطة. اجتز المختبر بتقرير قابل للإعادة، queries/IDs، حدود واضحة، QA وشرح شفهي.</p>
       </Alert>
     </div>
   );

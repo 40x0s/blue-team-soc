@@ -2,738 +2,642 @@ import Alert from '../../components/Alert';
 import CodeBlock from '../../components/CodeBlock';
 import { useState } from 'react';
 
-const projects = [
+type PortfolioProject = {
+  num: number;
+  title: string;
+  goal: string;
+  estimated: string;
+  safety: string;
+  requirements: string[];
+  steps: { title: string; code: string }[];
+  reportTemplate: string;
+  deliverables: string[];
+  acceptanceCriteria: string[];
+};
+
+export const projects: PortfolioProject[] = [
   {
     num: 1,
-    title: 'PCAP Investigation - HTTPS Traffic Analysis',
-    goal: 'إثبات فهمك الكامل لطبقات الشبكة من DNS إلى HTTPS.',
-    requirements: ['Wireshark', 'Kali أو أي جهاز', 'ملف PCAP من نشاطك'],
+    title: 'Network Evidence Pack — DNS, TCP, TLS',
+    goal: 'إنتاج baseline قابل لإعادة الاختبار يشرح ما تثبته الحزم وما لا تكشفه TLS/ECH بدل تقرير بلقطات فقط.',
+    estimated: '4–6 ساعات بعد إكمال Network Lab 1',
+    safety: 'التقط VM المختبر فقط، استخدم example.com، حدّد حجم/مدة PCAP، ولا ترفع الالتقاط الخام علنًا.',
+    requirements: ['Wireshark/tshark', 'curl وdig', 'Linux VM', 'Git repository خاص أثناء العمل'],
     steps: [
-      { title: 'التقط PCAP', code: `# على Kali
-sudo wireshark
-# اختر interface
-# ابدأ Capture
-# في terminal:
-curl -I https://www.github.com
-# أوقف Capture
-# احفظ كـ https-analysis.pcap` },
-      { title: 'التحليل', code: `# استخرج:
-# - DNS Query/Response
-# - IP المُحلّ
-# - TCP Three-way handshake
-# - TLS ClientHello (SNI, version, ciphers)
-# - TLS ServerHello
-# - Certificate info` },
+      { title: 'اجمع evidence حقيقيًا ومحدودًا', code: `# استبدل INTERFACE فقط وسجل baseline في notes.txt
+ip -br address | tee notes.txt
+ip route | tee -a notes.txt
+cat /etc/resolv.conf | tee -a notes.txt
+date -u +%FT%TZ | tee -a notes.txt
+
+sudo tshark -i INTERFACE -a duration:45 -a filesize:10240 \\
+  -w https-baseline.pcapng
+# في terminal آخر أثناء الالتقاط:
+dig example.com A +tries=1 +time=3
+curl --http1.1 --connect-timeout 5 --max-time 15 -sS -o /dev/null \\
+  -w 'ip=%{remote_ip} code=%{http_code} tls=%{ssl_version} total=%{time_total}\\n' \\
+  https://example.com/ | tee curl-result.txt
+sha256sum https-baseline.pcapng | tee evidence.sha256` },
+      { title: 'صدّر حقولًا قابلة للمراجعة', code: `mkdir -p exports
+tshark -r https-baseline.pcapng -Y 'dns.qry.name=="example.com"' \\
+  -T fields -E header=y -E separator=, \\
+  -e frame.number -e frame.time_relative -e ip.src -e ip.dst \\
+  -e dns.flags.response -e dns.a > exports/dns.csv
+
+tshark -r https-baseline.pcapng -Y 'tcp.flags.syn==1' \\
+  -T fields -E header=y -E separator=, \\
+  -e frame.number -e frame.time_relative -e tcp.stream -e ip.src -e ip.dst \\
+  -e tcp.srcport -e tcp.dstport -e tcp.flags.ack > exports/tcp.csv
+
+tshark -r https-baseline.pcapng -Y 'tls.handshake.type==1 or tls.handshake.type==2' \\
+  -T fields -E header=y -E separator=, \\
+  -e frame.number -e frame.time_relative -e tcp.stream -e ip.src -e ip.dst \\
+  -e tls.handshake.type -e tls.handshake.extensions_server_name > exports/tls.csv` },
+      { title: 'ابنِ README دون اختلاق قيم', code: `# الهيكل المقترح
+project-01-network-baseline/
+├── README.md                 # summary + scope + limitations
+├── evidence.sha256
+├── curl-result.txt
+├── notes.txt                 # interface/IP/resolver/time/tool versions
+├── exports/                  # CSV من PCAP
+└── private-evidence/         # PCAP؛ لا تنشره تلقائياً
+
+# أضف إصدارات الأدوات
+curl --version >> notes.txt
+tshark --version | head -1 >> notes.txt` },
     ],
-    reportTemplate: `# HTTPS Traffic Analysis Report
+    reportTemplate: `# DNS–TCP–TLS Evidence Report
 
-**Investigator**: Your Name
-**Date**: 2025-01-15
-**PCAP File**: https-analysis.pcap
-**Target**: github.com
+## Scope and provenance
+- Capture host/interface/time window: ___
+- Client/resolver/server IPs: ___
+- Tool versions: ___
+- PCAP SHA-256: ___
 
-## Executive Summary
-Complete analysis of an HTTPS session to github.com, documenting
-DNS resolution, TCP connection establishment, and TLS handshake process.
+## Reproducible timeline
+| Frame | Relative time | Layer | Source → destination | Observation |
+|---:|---:|---|---|---|
+| | | DNS | | |
+| | | TCP | | |
+| | | TLS | | |
 
-## Environment
-- Source: Kali Linux (192.168.56.30)
-- Destination: github.com
-- Tool: Wireshark 4.0
-- Method: curl HEAD request
+## Measurements
+- DNS response: ___ ms
+- SYN→SYN-ACK / full TCP handshake: ___ / ___ ms
+- curl total: ___ s (not equivalent to one handshake)
 
-## Investigation Timeline
-| Time | Phase | Event | Details |
-|------|-------|-------|---------|
-| 00:00.000 | DNS | Query | A record for github.com |
-| 00:00.012 | DNS | Response | 140.82.114.4 |
-| 00:00.013 | TCP | SYN | To 140.82.114.4:443 |
-| 00:00.025 | TCP | SYN-ACK | Connection accepted |
-| 00:00.026 | TCP | ACK | Handshake complete |
-| 00:00.027 | TLS | ClientHello | SNI: github.com, TLS 1.3 |
-| 00:00.040 | TLS | ServerHello | Selected cipher: AES_256_GCM |
-| 00:00.042 | TLS | Certificate | Verified |
-| 00:00.044 | TLS | Finished | Encrypted channel established |
+## Visibility limits
+- SNI observed? ___; ECH/cache implications: ___
+- Certificate messages observed? ___; TLS 1.3 implications: ___
+- HTTP path/body visible? ___
+- Claims not supported by this evidence: ___
 
-## Detailed Analysis
-
-### Phase 1: DNS Resolution
-**Filter used**: dns and dns.qry.name contains "github"
-Query type: A (IPv4)
-Response: 140.82.114.4
-Response time: 12ms
-TTL: 60 seconds
-
-### Phase 2: TCP Three-Way Handshake
-**Filter used**: tcp.flags.syn == 1
-- SYN: Seq=0
-- SYN-ACK: Seq=0, Ack=1
-- ACK: Seq=1, Ack=1
-Total handshake time: 13ms
-
-### Phase 3: TLS Handshake
-**Filter used**: tls.handshake
-**ClientHello Details**:
-- TLS Version: 1.3
-- SNI Extension: github.com
-- Cipher Suites Offered: 17
-
-**ServerHello Details**:
-- Selected Cipher: TLS_AES_256_GCM_SHA384
-- Certificate Chain: 3 certificates
-- Subject: github.com
-- Issuer: DigiCert Global Root CA
-
-## Security Observations
-✅ TLS 1.3 used (latest version)
-✅ Strong cipher selected (AES-256-GCM)
-✅ Valid certificate chain
-
-## SOC Relevance
-This baseline analysis helps understand normal HTTPS behavior,
-essential for detecting anomalies like:
-- C2 traffic over HTTPS
-- Self-signed certificates
-- Unusual SNI patterns
-- Weak cipher negotiation
-
-## MITRE ATT&CK Context
-Not applicable - benign traffic analysis used as a baseline.
-
-## Tools & Filters Used
-| Tool | Purpose | Filter/Command |
-|------|---------|----------------|
-| Wireshark | Capture & Analysis | dns, tcp.flags.syn==1, tls.handshake |
-| curl | Traffic generation | curl -I https://github.com |`,
-    deliverables: ['PCAP file', 'Detailed report', '3+ screenshots', 'README in project folder'],
+## Reproduction
+Exact commands, substitutions, and expected variance: ___`,
+    deliverables: ['README عربي/إنجليزي مختصر', 'PCAP hash وprivate evidence policy', '3 CSV exports', 'Timeline محسوب', 'قسم limitations'],
+    acceptanceCriteria: ['كل قيمة في التقرير مأخوذة من evidence لا من المثال', 'يمكن لشخص آخر إعادة الأوامر', 'لا توجد بيانات شخصية أو PCAP خام في public repo', 'تشرح ECH/TLS 1.3 وcache بلا أحكام قطعية'],
   },
   {
     num: 2,
-    title: 'Linux SSH Brute Force - Complete Investigation',
-    goal: 'تحقيق كامل في هجوم SSH brute force مع كتابة scripts للأتمتة.',
-    requirements: ['Linux target (Ubuntu)', 'Kali (attacker)', 'sshpass'],
+    title: 'SSH Authentication Case — Parser + Triage',
+    goal: 'إثبات القدرة على جمع auth telemetry وتحليل source/user/success ضمن نافذة قضية مع parser متين نسبيًا.',
+    estimated: '6–8 ساعات بعد Linux Lab 1',
+    safety: 'جهازان Host-only تملكهما، حساب labuser، خمس محاولات فقط. لا تختبر IP عامًا ولا حسابًا حقيقيًا ولا تنفذ block خارج playbook.',
+    requirements: ['Ubuntu lab target', 'Linux source VM', 'OpenSSH', 'Python 3'],
     steps: [
-      { title: 'محاكاة الهجوم', code: `# من Kali - بدون أدوات هجومية خارجية
-for i in {1..30}; do
-  sshpass -p "wrongpass$i" ssh -o StrictHostKeyChecking=no admin@192.168.56.40 exit 2>&1
+      { title: 'نفّذ simulation محدودة واجمع window', code: `# على الهدف قبل الاختبار
+mkdir -p case-ssh/evidence
+START=$(date -u +%FT%TZ)
+printf '%s\\n' "$START" | tee case-ssh/evidence/start-utc.txt
+
+# على المصدر بعد التحقق من TARGET_IP Host-only:
+for i in $(seq 1 5); do
+  sshpass -p "SOC-LAB-WRONG-$i" ssh \\
+    -o PreferredAuthentications=password -o PubkeyAuthentication=no \\
+    -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \\
+    -o ConnectTimeout=5 labuser@TARGET_IP exit
 done
 
-# أو يدوياً ادخل كلمات مرور خاطئة 30 مرة` },
-      { title: 'جمع الأدلة', code: `# على Ubuntu target:
-sudo cp /var/log/auth.log ./investigation/auth-log-evidence.log
-last -i > sessions.txt
-who > current-users.txt` },
-      { title: 'التحليل بـ Bash Script', code: `#!/bin/bash
-# SSH Brute Force Investigation Script
-# Author: Your Name
-# Version: 1.0
-
-LOG_FILE="\${1:-/var/log/auth.log}"
-OUTPUT_DIR="./analysis-output"
-mkdir -p $OUTPUT_DIR
-
-echo "==================================="
-echo "  SSH Brute Force Investigation"
-echo "  Log: $LOG_FILE"
-echo "  Date: $(date)"
-echo "==================================="
-echo ""
-
-# 1. Total failed attempts
-TOTAL_FAILED=$(grep -c "Failed password" $LOG_FILE)
-echo "[+] Total Failed Login Attempts: $TOTAL_FAILED"
-echo ""
-
-# 2. Top attacker IPs
-echo "[+] Top 10 Attacker IPs:"
-grep "Failed password" $LOG_FILE | \\
-  awk '{print $11}' | \\
-  sort | uniq -c | sort -rn | head -10 | \\
-  tee $OUTPUT_DIR/top-attacker-ips.txt
-echo ""
-
-# 3. Top targeted users
-echo "[+] Top 10 Targeted Users:"
-grep "Failed password" $LOG_FILE | \\
-  awk '{print $9}' | \\
-  sort | uniq -c | sort -rn | head -10 | \\
-  tee $OUTPUT_DIR/top-targeted-users.txt
-echo ""
-
-# 4. Invalid users
-echo "[+] Invalid Users Attempted:"
-grep "Invalid user" $LOG_FILE | \\
-  awk '{print $8}' | \\
-  sort | uniq -c | sort -rn | head -10 | \\
-  tee $OUTPUT_DIR/invalid-users.txt
-echo ""
-
-# 5. Successful logins
-echo "[+] Successful Logins:"
-grep "Accepted" $LOG_FILE | \\
-  awk '{print $9, "from", $11, "at", $1, $2, $3}' | \\
-  tee $OUTPUT_DIR/successful-logins.txt
-echo ""
-
-# 6. Attack timeline
-echo "[+] Attack Activity by Hour:"
-grep "Failed password" $LOG_FILE | \\
-  awk '{print $3}' | cut -d: -f1 | \\
-  sort | uniq -c | \\
-  tee $OUTPUT_DIR/attack-timeline.txt
-echo ""
-
-# 7. First and last attack
-echo "[+] Attack Window:"
-echo "  First: $(grep 'Failed password' $LOG_FILE | head -1 | awk '{print $1, $2, $3}')"
-echo "  Last:  $(grep 'Failed password' $LOG_FILE | tail -1 | awk '{print $1, $2, $3}')"
-echo ""
-
-# 8. Generate IOC list
-echo "[+] Generating IOC list..."
-grep "Failed password" $LOG_FILE | \\
-  awk '{print $11}' | sort -u > $OUTPUT_DIR/iocs-ips.txt
-echo "  IOCs saved to: $OUTPUT_DIR/iocs-ips.txt"
-
-echo ""
-echo "==================================="
-echo "  Analysis Complete"
-echo "  Results in: $OUTPUT_DIR/"
-echo "==================================="` },
-      { title: 'التحليل بـ Python', code: `#!/usr/bin/env python3
-"""
-SSH Brute Force IOC Extractor
-Author: Your Name | Version: 1.0
-"""
-import re, sys, json
-from collections import Counter
-from datetime import datetime
-
-def extract_iocs(log_file):
-    ip_pattern = r'\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b'
-    iocs = {
-        'metadata': {'analyzed_at': datetime.now().isoformat(), 'source': log_file},
-        'failed_logins': {'total': 0, 'top_ips': [], 'top_users': []},
-        'successful_logins': [], 'invalid_users': [], 'all_attacker_ips': []
-    }
-    failed_ips, failed_users, invalid_list, success_list = [], [], [], []
-
-    with open(log_file, 'r') as f:
-        for line in f:
-            ips = re.findall(ip_pattern, line)
-            if 'Failed password' in line:
-                iocs['failed_logins']['total'] += 1
-                if ips: failed_ips.extend(ips)
-                m = re.search(r'for (?:invalid user )?(\\S+) from', line)
-                if m: failed_users.append(m.group(1))
-            elif 'Accepted' in line:
-                m = re.search(r'for (\\S+) from', line)
-                if m and ips: success_list.append({'user': m.group(1), 'ip': ips[0]})
-            elif 'Invalid user' in line:
-                m = re.search(r'Invalid user (\\S+)', line)
-                if m: invalid_list.append(m.group(1))
-
-    iocs['failed_logins']['top_ips'] = [{'ip':ip,'count':c} for ip,c in Counter(failed_ips).most_common(10)]
-    iocs['failed_logins']['top_users'] = [{'user':u,'count':c} for u,c in Counter(failed_users).most_common(10)]
-    iocs['successful_logins'] = success_list
-    iocs['invalid_users'] = [{'user':u,'count':c} for u,c in Counter(invalid_list).most_common(10)]
-    iocs['all_attacker_ips'] = sorted(set(failed_ips))
-    return iocs
-
-def print_report(iocs):
-    print("=" * 60)
-    print("  SSH BRUTE FORCE IOC EXTRACTION REPORT")
-    print(f"  Source: {iocs['metadata']['source']}")
-    print("=" * 60)
-    print(f"\\n[+] Total Failed: {iocs['failed_logins']['total']}")
-    print("\\n[+] Top Attacker IPs:")
-    for i in iocs['failed_logins']['top_ips']: print(f"    {i['count']:5d} {i['ip']}")
-    print("\\n[+] Successful Logins:")
-    for i in iocs['successful_logins']: print(f"    {i['user']:20s} from {i['ip']}")
-    print(f"\\n[+] Unique Attacker IPs: {len(iocs['all_attacker_ips'])}")
-
-if __name__ == "__main__":
-    if len(sys.argv) < 2: print(f"Usage: {sys.argv[0]} <auth.log> [output.json]"); sys.exit(1)
-    iocs = extract_iocs(sys.argv[1])
-    print_report(iocs)
-    out = sys.argv[2] if len(sys.argv) > 2 else 'iocs.json'
-    with open(out, 'w') as f: json.dump(iocs, f, indent=2)
-    print(f"\\n[+] JSON saved to: {out}")` },
+# على الهدف: استخدم اسم service الصحيح ssh أو sshd
+sudo journalctl -u ssh --since "$START" --no-pager -o short-iso \\
+  > case-ssh/evidence/ssh-window.log
+sha256sum case-ssh/evidence/ssh-window.log > case-ssh/evidence/SHA256SUMS` },
+      { title: 'اكتب parser لا يعتمد على رقم حقل ثابت', code: `cat > case-ssh/analyze_ssh.py <<'PY'
+#!/usr/bin/env python3
+import collections, ipaddress, json, re, sys
+from pathlib import Path
+failed = re.compile(r'Failed password for (?:(?:invalid user) )?(?P<user>\\S+) from (?P<ip>\\S+) port (?P<port>\\d+)')
+accepted = re.compile(r'Accepted \\S+ for (?P<user>\\S+) from (?P<ip>\\S+) port (?P<port>\\d+)')
+rows=[]
+for number,line in enumerate(Path(sys.argv[1]).read_text(errors='replace').splitlines(),1):
+    kind='failed' if 'Failed password' in line else 'accepted' if 'Accepted ' in line else None
+    match=(failed if kind=='failed' else accepted).search(line) if kind else None
+    if not match: continue
+    data=match.groupdict()
+    try: ipaddress.ip_address(data['ip'])
+    except ValueError: continue
+    rows.append({'line':number,'result':kind,**data})
+summary={
+  'failed':sum(r['result']=='failed' for r in rows),
+  'accepted':sum(r['result']=='accepted' for r in rows),
+  'failed_by_ip':collections.Counter(r['ip'] for r in rows if r['result']=='failed'),
+  'failed_by_user':collections.Counter(r['user'] for r in rows if r['result']=='failed'),
+  'events':rows,
+}
+summary['failed_by_ip']=dict(summary['failed_by_ip'])
+summary['failed_by_user']=dict(summary['failed_by_user'])
+print(json.dumps(summary,indent=2))
+PY
+python3 case-ssh/analyze_ssh.py case-ssh/evidence/ssh-window.log \\
+  | tee case-ssh/analysis.json` },
+      { title: 'اختبر parser بfixture ولا تخفِ gaps', code: `cat > /tmp/ssh-fixture.log <<'EOF'
+2026-08-17 host sshd[100]: Failed password for labuser from 192.0.2.10 port 40001 ssh2
+2026-08-17 host sshd[101]: Failed password for invalid user admin from 192.0.2.10 port 40002 ssh2
+2026-08-17 host sshd[102]: Accepted publickey for maint from 192.0.2.20 port 40003 ssh2
+malformed Failed password event
+EOF
+python3 case-ssh/analyze_ssh.py /tmp/ssh-fixture.log
+# expected: failed=2, accepted=1; malformed line ignored and documented` },
     ],
-    reportTemplate: `# SSH Brute Force Investigation
+    reportTemplate: `# SSH Authentication Investigation
 
-**Case ID**: INC-LIN-001  |  **Severity**: High  |  **Status**: Closed - TP
-**Investigator**: Your Name  |  **Date**: 2025-01-15
+## Scope and evidence
+- Authorization/source/target/window: ___
+- Log source/timezone/SHA-256: ___
 
-## Executive Summary
-Detected 30 failed SSH authentication attempts from a single source IP
-targeting multiple user accounts within a 5-minute window.
+## Results
+- Failed / accepted / unsupported lines: ___ / ___ / ___
+- Source and user distribution: ___
+- Related success correlation: ___
 
-## Affected Assets
-- Target Host: ubuntu-target (192.168.56.40)
-- Service: OpenSSH on port 22
-- Targeted Users: admin, root, ubuntu, test, guest
+## Competing explanations
+Controlled test / user or service error / external guessing: supporting and refuting evidence ___
 
-## Attack Timeline
-| Time | Event | Details |
-|------|-------|---------|
-| 14:23:01 | First failed attempt | admin from 192.168.56.30 |
-| 14:27:45 | Final attempt | guest from 192.168.56.30 |
-| Duration | 4 minutes 49 seconds | 30 attempts, ~6/min |
+## Decision
+Classification: Benign Positive. T1110.001 describes the simulated behavior; it does not prove compromise.
+Production escalation and authorized containment would be: ___
 
-## MITRE ATT&CK
-| Tactic | Technique |
-|--------|-----------|
-| Credential Access (TA0006) | T1110.001 - Password Guessing |
-
-## Response Actions
-1. ✅ Blocked source IP: ufw deny from 192.168.56.30
-2. ✅ Verified no successful login occurred
-3. ✅ Reviewed all user accounts
-
-## Hardening Recommendations
-1. Enable fail2ban
-2. Disable password auth, use SSH keys
-3. Change SSH port
-4. Enable two-factor authentication`,
-    deliverables: ['auth.log evidence', 'Bash script', 'Python script', 'Investigation report', 'Screenshots', 'JSON IOCs'],
+## Parser limits
+Formats tested, IPv4/IPv6, rotation, timezone, and malformed handling: ___`,
+    deliverables: ['Scoped log + hash', 'Python parser', 'Synthetic fixture', 'analysis.json', 'Case report'],
+    acceptanceCriteria: ['لا positional awk للـIP/user', 'خمس محاولات Host-only فقط', 'يفحص successes', 'يوثق unsupported lines', 'لا يدعي block/remediation لم تحدث'],
   },
   {
     num: 3,
-    title: 'Windows AD - Lateral Movement Detection Lab',
-    goal: 'محاكاة هجوم Lateral Movement بـ PsExec وكشفه باستخدام Windows Events و Sysmon.',
-    requirements: ['DC01 (Windows Server)', 'WIN-CLIENT1/2 (Windows 10)', 'Sysmon مثبت', 'Audit Policy مفعل'],
+    title: 'Phishing Investigation — Synthetic .eml',
+    goal: 'تحليل headers وURLs وattachments offline من بريد مصطنع، مع حفظ الأصل وحدود DMARC.',
+    estimated: '6–8 ساعات بعد SOC Lab 4',
+    safety: 'استخدم ملف SOC Lab 4 الذي يحتوي .invalid و192.0.2.44. لا تنقر ولا ترفع بريدًا أو attachment إلى خدمة عامة.',
+    requirements: ['Python 3 standard library', 'Synthetic .eml', 'Text editor'],
     steps: [
-      { title: 'محاكاة الهجوم', code: `# من WIN-CLIENT1 (كـ admin):
-PsExec.exe \\\\WIN-CLIENT2 -u DOMAIN\\admin -p Password123 cmd.exe` },
-      { title: 'التحليل على الهدف WIN-CLIENT2', code: `# Event 7045 - Service installation (PSEXESVC)
-Get-WinEvent -FilterHashtable @{LogName='System';Id=7045} |
-  Where-Object {$_.Message -match "PSEXESVC"}
-
-# Event 4624 - Network logon
-Get-WinEvent -FilterHashtable @{LogName='Security';Id=4624} |
-  Where-Object {$_.Properties[8].Value -eq 3}
-
-# Sysmon Event 1 - Process creation
-Get-WinEvent -FilterHashtable @{
-  LogName='Microsoft-Windows-Sysmon/Operational';Id=1
-} | Where-Object {$_.Message -match "PSEXESVC"}` },
-      { title: 'التحليل على المصدر WIN-CLIENT1', code: `# Sysmon Event 1 - psexec.exe execution
-Get-WinEvent -FilterHashtable @{
-  LogName='Microsoft-Windows-Sysmon/Operational';Id=1
-} | Where-Object {$_.Message -match "psexec"}
-
-# Sysmon Event 3 - Network connection to target
-Get-WinEvent -FilterHashtable @{
-  LogName='Microsoft-Windows-Sysmon/Operational';Id=3
-} | Where-Object {$_.Message -match "WIN-CLIENT2"}` },
-      { title: 'Sigma Detection Rule', code: `title: PsExec Lateral Movement Detection
-id: 12345678-1234-1234-1234-123456789012
-status: experimental
-description: Detects PsExec usage for lateral movement
-author: Your Name
-date: 2025/01/15
-tags:
-  - attack.lateral_movement
-  - attack.t1021.002
-logsource:
-  product: windows
-  service: system
-detection:
-  selection:
-    EventID: 7045
-    ServiceName: PSEXESVC
-  condition: selection
-level: high` },
+      { title: 'احفظ الأصل واعمل على نسخة', code: `mkdir -p phishing-case/{evidence,working,output}
+cp synthetic-message.eml phishing-case/evidence/original.eml
+sha256sum phishing-case/evidence/original.eml | tee phishing-case/evidence/SHA256SUMS
+cp phishing-case/evidence/original.eml phishing-case/working/message.eml
+chmod a-w phishing-case/evidence/original.eml` },
+      { title: 'استخرج artifacts بلا تنفيذ', code: `cat > phishing-case/analyze_eml.py <<'PY'
+from email import policy
+from email.parser import BytesParser
+from pathlib import Path
+import hashlib,json,re,sys
+raw=Path(sys.argv[1]).read_bytes(); msg=BytesParser(policy=policy.default).parsebytes(raw)
+texts=[]; attachments=[]
+for part in msg.walk():
+    if part.get_content_disposition()=='attachment':
+        data=part.get_payload(decode=True) or b''
+        attachments.append({'name':part.get_filename(),'size':len(data),'sha256':hashlib.sha256(data).hexdigest()})
+    elif part.get_content_type() in ('text/plain','text/html'):
+        try: texts.append(part.get_content())
+        except Exception: pass
+urls=sorted(set(re.findall(r"https?://[^\\s<>\\"']+",'\\n'.join(texts))))
+out={'sha256':hashlib.sha256(raw).hexdigest(),'from':str(msg.get('From','')),
+'reply_to':str(msg.get('Reply-To','')),'return_path':str(msg.get('Return-Path','')),
+'subject':str(msg.get('Subject','')),'received':msg.get_all('Received',[]),
+'authentication_results':msg.get_all('Authentication-Results',[]),
+'urls':urls,'attachments':attachments}
+print(json.dumps(out,ensure_ascii=False,indent=2))
+PY
+python3 phishing-case/analyze_eml.py phishing-case/working/message.eml \\
+  | tee phishing-case/output/artifacts.json` },
+      { title: 'حلل الثقة والنطاق', code: `# أجب بأدلة:
+# - From/Reply-To/Return-Path alignment؛ عدم الاتساق قرينة لا verdict.
+# - Received من الأسفل للأعلى وحدد trust boundary.
+# - Authentication-Results نتيجة مُعلنة؛ هل أضافها MTA موثوق؟
+# - hash لا يثبت maliciousness.
+# - ابحث في gateway/identity/endpoint عن delivery, click, credential entry,
+#   process execution, mailbox rules وOAuth؛ لا تساوِ click بالتنفيذ.` },
     ],
-    reportTemplate: `# Lateral Movement Detection - PsExec
+    reportTemplate: `# Synthetic Phishing Case
 
-**Case ID**: INC-WIN-001  |  **Severity**: Critical
-**Status**: Confirmed TP - Lateral Movement Detected
+## Evidence handling
+Original/working SHA-256 and synthetic indicators: ___
 
-## Attack Path
-[Attacker] → WIN-CLIENT1 → [PsExec] → WIN-CLIENT2
-                                       ↓ PSEXESVC Service Created
-                                       ↓ cmd.exe Execution
+## Header analysis
+From/Reply-To/Return-Path: ___
+Received chain and trust boundary: ___
+SPF/DKIM/DMARC claimed result: ___
+Why this is not independent cryptographic verification: ___
 
-## Timeline
-| Time | Source | Event | Target | Details |
-|------|--------|-------|--------|---------|
-| 10:00:00 | WIN-CLIENT1 | Sysmon 1 | - | psexec.exe launched |
-| 10:00:01 | WIN-CLIENT1 | Sysmon 3 | WIN-CLIENT2 | SMB (port 445) |
-| 10:00:02 | WIN-CLIENT2 | Sec 4624 | - | Network logon Type 3 |
-| 10:00:02 | WIN-CLIENT2 | Sys 7045 | - | PSEXESVC installed |
-| 10:00:03 | WIN-CLIENT2 | Sysmon 1 | - | PSEXESVC → cmd.exe |
+## Artifacts
+| Type | Value/hash | Context | Confidence | Safe next query |
+|---|---|---|---|---|
+| | | | | |
 
-## Detection Evidence
-- Event 7045: PSEXESVC service installation 🚨
-- Event 4624: Network Logon Type 3, NTLM auth ⚠️
-- Process Tree: services.exe → PSEXESVC.exe → cmd.exe 🚨
-- Sysmon 3: SMB connection to port 445
-
-## MITRE ATT&CK
-| Tactic | Technique |
-|--------|-----------|
-| Lateral Movement | T1021.002 - SMB Admin Shares |
-| Execution | T1569.002 - Service Execution |
-
-## Response Actions
-1. ✅ Both endpoints isolated
-2. ✅ Admin account password reset
-3. ✅ Memory dumps collected
-4. ✅ Full AV scan initiated
-
-## Recommendations
-- Disable Admin Shares if not needed
-- Enforce SMB signing
-- Restrict PsExec via AppLocker
-- Implement LAPS`,
-    deliverables: ['EVTX files من الجهازين', 'PowerShell scripts للاستعلام', 'Sysmon config المستخدم', 'Sigma rule', 'Process tree screenshot', 'Full investigation report'],
+## Scope and decision
+Recipients/delivery/click/credential/endpoint evidence: ___
+Verdict, confidence, gaps, and authorized actions: ___`,
+    deliverables: ['Synthetic original + hash', 'Offline parser', 'artifacts.json', 'Header timeline', 'Case report'],
+    acceptanceCriteria: ['لا public upload أو live click', 'الأصل read-only والعمل على نسخة', 'لا ادعاء DKIM verification من header فقط', 'click ≠ execution', 'لا بيانات حقيقية'],
   },
   {
     num: 4,
-    title: 'Wazuh SIEM - Complete Deployment',
-    goal: 'نشر Wazuh كاملاً مع agents وقواعد مخصصة.',
-    requirements: ['Ubuntu 22.04 Server (8GB RAM)', 'Windows Client', 'Linux Client'],
+    title: 'Wazuh 4.14 End-to-End Validation',
+    goal: 'إعادة تنفيذ عقد المختبر الموحد: agent→localfile→JSON decoder→rule 100100→alert→search بثلاث قياسات وnegative test.',
+    estimated: '8–12 ساعة',
+    safety: 'VMs معزولة وJSON marker حميد. ثبّت agent من Dashboard المطابق؛ لا تنسخ package URL قديمًا ولا تنشر enrollment secrets.',
+    requirements: ['Wazuh 4.14 all-in-one موثق الإصدار', 'Linux agent VM', 'Snapshot', 'Time sync'],
     steps: [
-      { title: 'تثبيت Wazuh Server', code: `# على Ubuntu 22.04
-curl -sO https://packages.wazuh.com/4.7/wazuh-install.sh
-sudo bash ./wazuh-install.sh -a
-# احفظ الـ admin password` },
-      { title: 'تثبيت Agent على Windows', code: `msiexec /i wazuh-agent-4.7.0-1.msi /q ^
-  WAZUH_MANAGER="WAZUH-SERVER-IP" ^
-  WAZUH_AGENT_NAME="WIN-CLIENT1"
-NET START WazuhSvc` },
-      { title: 'تثبيت Agent على Linux', code: `curl -so wazuh-agent.deb https://packages.wazuh.com/4.x/apt/...
-sudo WAZUH_MANAGER="WAZUH-SERVER-IP" dpkg -i ./wazuh-agent.deb
-sudo systemctl enable wazuh-agent
-sudo systemctl start wazuh-agent` },
-      { title: 'إنشاء Custom Rules', code: `<!-- ملف /var/ossec/etc/rules/local_rules.xml -->
+      { title: 'ثبت version وagent health', code: `# manager
+sudo /var/ossec/bin/wazuh-control info
+sudo /var/ossec/bin/agent_control -lc
+# سجل Active + latest keepalive + UTC time؛ لا تعرض registration key.` },
+      { title: 'أضف عقد localfile نفسه على agent', code: `# داخل <ossec_config> في /var/ossec/etc/ossec.conf
+<localfile>
+  <location>/var/log/soc-lab.json</location>
+  <log_format>json</log_format>
+</localfile>
 
-<group name="windows,powershell,">
-  <!-- PowerShell Encoded Command -->
-  <rule id="100001" level="12">
-    <if_sid>91802</if_sid>
-    <field name="win.eventdata.scriptBlockText">EncodedCommand</field>
-    <description>Suspicious PowerShell: EncodedCommand detected</description>
-    <mitre><id>T1059.001</id></mitre>
-  </rule>
-
-  <!-- PowerShell Download Cradle -->
-  <rule id="100002" level="13">
-    <if_sid>91802</if_sid>
-    <field name="win.eventdata.scriptBlockText" type="pcre2">
-      (DownloadString|DownloadFile|IEX|Invoke-Expression)
-    </field>
-    <description>PowerShell Download Cradle detected</description>
-    <mitre><id>T1059.001</id><id>T1105</id></mitre>
+sudo install -m 640 /dev/null /var/log/soc-lab.json
+sudo systemctl restart wazuh-agent
+sudo systemctl status wazuh-agent --no-pager` },
+      { title: 'اختبر rule 100100 بالعقد الموحد', code: `# manager: /var/ossec/etc/rules/local_rules.xml
+<group name="soc_lab,">
+  <rule id="100100" level="5">
+    <decoded_as>json</decoded_as>
+    <field name="lab_event">PIPELINE_TEST</field>
+    <description>SOC lab synthetic pipeline marker</description>
   </rule>
 </group>
 
-<group name="windows,lateral_movement,">
-  <!-- PsExec Service Installation -->
-  <rule id="100010" level="13">
-    <if_sid>61151</if_sid>
-    <field name="win.eventdata.serviceName">PSEXESVC</field>
-    <description>PsExec lateral movement detected</description>
-    <mitre><id>T1021.002</id><id>T1569.002</id></mitre>
-  </rule>
-</group>
+sudo /var/ossec/bin/wazuh-logtest
+# Positive:
+# {"lab_event":"PIPELINE_TEST","test_id":"WAZUH-E2E-001","user":"lab-user"}
+# Negative: lab_event=PIPELINE_TEST_TYPO؛ يجب ألا يطابق 100100.
+# اختبر XML/rule أولًا ثم restart manager لتوليد live alerts.` },
+      { title: 'قس ingestion ثلاث مرات وشخّص بالطبقات', code: `# manager بعد نجاح logtest
+sudo systemctl restart wazuh-manager
+sudo systemctl status wazuh-manager --no-pager
 
-<group name="windows,credential_access,">
-  <!-- LSASS Access (potential Mimikatz) -->
-  <rule id="100020" level="14">
-    <if_sid>61648</if_sid>
-    <field name="win.eventdata.targetImage" type="pcre2">lsass\\.exe</field>
-    <field name="win.eventdata.grantedAccess">0x1010|0x1410|0x1438</field>
-    <description>Suspicious LSASS Access - Possible Credential Dumping</description>
-    <mitre><id>T1003.001</id></mitre>
-  </rule>
-</group>
+# agent
+for n in 1 2 3; do
+  ts=$(date -u +%FT%TZ)
+  printf '{"event_time":"%s","lab_event":"PIPELINE_TEST","test_id":"WAZUH-E2E-001","run":"%s","user":"lab-user"}\\n' "$ts" "$n" \\
+    | sudo tee -a /var/log/soc-lab.json
+  sleep 5
+done
+# Dashboard: rule.id:100100 AND data.test_id:WAZUH-E2E-001
+# اعرض data.run/data.event_time ثم احسب alert timestamp - event_time.
 
-<group name="linux,bruteforce,">
-  <!-- High volume SSH failures -->
-  <rule id="100030" level="10" frequency="10" timeframe="60">
-    <if_matched_sid>5716</if_matched_sid>
-    <description>SSH Brute Force: Multiple failures in 1 minute</description>
-    <mitre><id>T1110.001</id></mitre>
-  </rule>
-</group>` },
-      { title: 'إعادة تشغيل والتحقق', code: `sudo systemctl restart wazuh-manager
-# ولّد أحداث للاختبار:
-# - على Windows: شغّل powershell encoded
-# - على Linux: 10+ failed SSH
-# افحص في Dashboard` },
+# troubleshooting على manager
+sudo tail -n 100 /var/ossec/logs/ossec.log
+sudo grep 'WAZUH-E2E-001' /var/ossec/logs/alerts/alerts.json | tail` },
     ],
-    reportTemplate: `# Wazuh SIEM Deployment Project
+    reportTemplate: `# Wazuh E2E Validation
 
-## Architecture
-┌─────────────────┐
-│  Wazuh Server   │
-│ 192.168.56.50   │
-└────────┬────────┘
-         │
-┌────────┼────────────┐
-│        │            │
-DC01   WIN-CLIENT   UBUNTU01
-Agent    Agent       Agent
+## Environment
+Manager/agent/OS versions, agent status, keepalive, time sync: ___
 
-## Custom Detection Rules
-| Rule ID | Severity | Description | MITRE |
-|---------|----------|-------------|-------|
-| 100001 | 12 | PowerShell EncodedCommand | T1059.001 |
-| 100002 | 13 | PowerShell Download Cradle | T1059.001, T1105 |
-| 100010 | 13 | PsExec Lateral Movement | T1021.002 |
-| 100020 | 14 | LSASS Credential Dumping | T1003.001 |
-| 100030 | 10 | SSH Brute Force | T1110.001 |
+## Data contract
+| Field | Expected | Observed |
+|---|---|---|
+| rule.id | 100100 | |
+| data.test_id | WAZUH-E2E-001 | |
+| data.lab_event | PIPELINE_TEST | |
+| data.run | 1/2/3 | |
 
-## Test Results
-- PowerShell Encoded: ✅ Alert within 5 seconds
-- SSH Brute Force: ✅ Alert at 10 attempts
-- LSASS Access: ✅ Critical alert, severity 14`,
-    deliverables: ['Deployment guide', 'Custom rules XML', 'Dashboard screenshots', 'Test results', 'Architecture diagram'],
+## Chain evidence
+| Layer | Evidence | Result |
+|---|---|---|
+| source/localfile | exact JSON + path | |
+| agent/manager | health/log evidence | |
+| decoder/rule | logtest phases 2–3 | |
+| alert/index | alerts.json + Dashboard | |
+
+## Latency
+| Run | event_time UTC | Alert UTC | Delay | One alert? |
+|---:|---|---|---:|---|
+| 1 | | | | |
+| 2 | | | | |
+| 3 | | | | |
+Median/max: ___ / ___
+
+Negative input: PIPELINE_TEST_TYPO
+Collected? ___ Rule 100100 alert? ___ Explanation: ___
+Proves: synthetic pipeline and tested rule. Does not prove: real-attack coverage, production capacity, HA, or universal SLA.`,
+    deliverables: ['Version/agent evidence', 'Sanitized localfile/rule configs', 'Positive/negative logtest', '3 latency measurements', 'Troubleshooting tree'],
+    acceptanceCriteria: ['Contract matches SOC Lab 6 exactly', 'Version actually observed', 'Dashboard-generated agent command', 'Rule 100100 no conflict', '3/3 measurements + time sync', 'Negative test', 'No secrets in Git'],
   },
   {
     num: 5,
-    title: 'Phishing Email Analysis',
-    goal: 'تحليل phishing email احترافي.',
-    requirements: ['Email sample (PhishTank/PhishStats)', 'VirusTotal', 'URLscan.io', 'any.run'],
+    title: 'Detection Engineering — Three Tested Sigma Rules',
+    goal: 'ثلاث قواعد جيدة مع fixtures وnegative tests وtuning، بدل 10 قواعد غير مختبرة.',
+    estimated: '10–14 ساعة',
+    safety: 'استخدم events مصطنعة/حميدة. لا تنفذ credential dumping أو evasion لتوليد logs، ولا تسمِّ القواعد production-ready.',
+    requirements: ['YAML', 'Sigma validator/CLI موثق الإصدار', 'Windows fixtures', 'Git'],
     steps: [
-      { title: 'لا تفتح المرفقات على جهازك!', code: `# استخدم:
-# - Sandbox (any.run, hybrid-analysis)
-# - VM معزولة
-# - جهاز LAB` },
-      { title: 'تحقق من Headers', code: `# ابحث عن:
-# - Return-Path
-# - From vs Reply-To (مختلفين = مشبوه)
-# - Received headers (تتبع المسار)
-# - SPF: fail = مشبوه
-# - DKIM: fail = مشبوه
-# - DMARC: fail = مشبوه` },
-    ],
-    reportTemplate: `# Phishing Email Analysis Report
-
-**Case ID**: PHISH-001  |  **Classification**: Confirmed Phishing
-
-## Email Metadata
-| Field | Value |
-|-------|-------|
-| From (Display) | "Microsoft Office 365" |
-| From (Actual) | support@office365-verify[.]com |
-| Reply-To | recover@office365-verify[.]com |
-| Subject | "Action Required: Your Mailbox Storage Full" |
-
-## Header Analysis
-- SPF: ❌ FAIL
-- DKIM: ❌ FAIL
-- DMARC: ❌ FAIL
-
-## Red Flags
-| Indicator | Risk Level |
-|-----------|------------|
-| Generic greeting "Dear User" | Medium |
-| Urgency tactics (24 hours) | High |
-| Threat of consequences | High |
-| Mismatched sender domain | Critical |
-
-## URL Analysis
-- Displayed: https://office365.microsoft.com/verify
-- Actual: https://office365-verify[.]com/login.php
-- WHOIS: Registered 5 days ago! 🚨
-- VirusTotal: 18/85 flagged as phishing
-
-## IOCs
-| Type | Value | Confidence |
-|------|-------|------------|
-| Domain | office365-verify.com | High |
-| IP | 45.142.213.X | High |
-| Email | support@office365-verify.com | High |
-
-## MITRE: T1566.002 - Spearphishing Link
-
-## Response Actions
-1. ✅ Removed from all 45 inboxes
-2. ✅ Blocked sender domain
-3. ✅ Blocked URL at proxy
-4. ✅ Reset password for user2 (compromised)`,
-    deliverables: ['Email headers (sanitized)', 'Screenshots', 'IOC list', 'Full report'],
-  },
-  {
-    num: 6,
-    title: 'Threat Hunting - Beaconing Detection',
-    goal: 'البحث الاستباقي عن beaconing patterns (C2 communication).',
-    requirements: ['SIEM', 'Python', 'KQL/SPL'],
-    steps: [
-      { title: 'Hunt Hypothesis', code: `# "Malware C2 beacons can be identified by their regular,
-# periodic network connections to external destinations,
-# often with consistent packet sizes."` },
-      { title: 'KQL Query - Periodic Connections', code: `DeviceNetworkEvents
-| where Timestamp > ago(24h)
-| where RemoteIPType == "Public"
-| where ActionType == "ConnectionSuccess"
-| summarize ConnCount = count(),
-    TimeStamps = make_list(Timestamp),
-    UniqueIPs = dcount(RemoteIP)
-  by DeviceName, RemoteIP, RemotePort, InitiatingProcessFileName
-| where ConnCount > 20
-| order by ConnCount desc` },
-      { title: 'Python - Beaconing Analysis', code: `import numpy as np
-from datetime import datetime
-
-def analyze_beaconing(timestamps):
-    """Calculate intervals and check for beaconing"""
-    intervals = []
-    for i in range(1, len(timestamps)):
-        delta = (timestamps[i] - timestamps[i-1]).total_seconds()
-        intervals.append(delta)
-
-    if len(intervals) < 5:
-        return None
-
-    mean = np.mean(intervals)
-    std = np.std(intervals)
-    cv = std / mean if mean > 0 else 0
-
-    # CV < 0.1 strongly suggests beaconing
-    return {
-        'mean_interval': mean,
-        'std_dev': std,
-        'cv': cv,
-        'is_beacon': cv < 0.1,
-        'connection_count': len(timestamps)
-    }` },
-    ],
-    reportTemplate: `# Threat Hunt Report: Beaconing Detection
-
-**Hunt ID**: HUNT-002  |  **Duration**: 4 hours
-
-## Hunt Hypothesis
-"Malware C2 beacons can be identified by their regular, periodic
-network connections to external destinations."
-
-## Suspicious Activity Found
-**Host**: FIN-WS-04
-**Process**: chrome.exe
-**Destination**: 185.220.101.X:443
-**Pattern**:
-- 96 connections in 24h
-- Mean interval: 900 seconds (15 min)
-- Std deviation: 12 seconds
-- CV: 0.013 (highly regular) 🚨
-
-## Verdict
-🚨 TRUE POSITIVE: Confirmed malicious browser extension
-performing C2 beaconing every 15 minutes.
-
-## Response
-1. ✅ Isolated FIN-WS-04
-2. ✅ Removed malicious extension
-3. ✅ Found on 3 more workstations - all remediated
-
-## MITRE ATT&CK
-- T1071.001 - Web Protocols
-- T1176 - Browser Extensions`,
-    deliverables: ['Hunt hypothesis', 'KQL queries', 'Python analysis script', 'Hunt report'],
-  },
-  {
-    num: 7,
-    title: 'Detection Engineering - Sigma Rules Pack',
-    goal: 'كتابة مجموعة من 10+ Sigma detection rules.',
-    requirements: ['Sigma format knowledge', 'YAML'],
-    steps: [
-      { title: 'نموذج Sigma Rule', code: `title: PowerShell Encoded Command Execution
-id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
-status: stable
-description: |
-  Detects PowerShell execution with -EncodedCommand parameter
-  commonly used by attackers to obfuscate malicious code.
-references:
-  - https://attack.mitre.org/techniques/T1059/001/
+      { title: 'اكتب قاعدة EncodedCommand سليمة', code: `title: PowerShell Encoded Command Argument
+id: 7f43d7b6-4abc-4bd2-8b37-b95fd68fe742
+status: test
+description: Detects an encoded-command argument and requires contextual triage.
 author: Your Name
-date: 2025/01/15
-tags:
-  - attack.execution
-  - attack.t1059.001
-  - attack.defense_evasion
-  - attack.t1027
 logsource:
   product: windows
   category: process_creation
 detection:
-  selection_img:
+  selection_image:
     Image|endswith:
-      - '\\\\powershell.exe'
-      - '\\\\pwsh.exe'
-  selection_cmd:
+      - '\\powershell.exe'
+      - '\\pwsh.exe'
+  selection_argument:
     CommandLine|contains:
-      - '-EncodedCommand'
-      - '-enc '
-      - '-ec '
-  condition: selection_img and selection_cmd
+      - ' -EncodedCommand '
+      - ' -enc '
+  condition: selection_image and selection_argument
 falsepositives:
-  - Legitimate administrative scripts (rare)
-level: high` },
+  - Authorized administration, packaging, or security tooling
+level: medium
+tags:
+  - attack.execution
+  - attack.t1059.001` },
+      { title: 'ابنِ test matrix يمنع substring traps', code: `case_id,Image,CommandLine,expected,reason
+P1,C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe,"powershell.exe -NoProfile -EncodedCommand UwBPAEMA",match,encoded argument
+N1,C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe,"powershell.exe Get-Process",no_match,no encoded argument
+N2,C:\\Tools\\encoder.exe,"encoder.exe -enc file",no_match,wrong image
+N3,C:\\Program Files\\PowerShell\\7\\pwsh.exe,"pwsh.exe -EncryptionAlgorithm AES",no_match,substring trap
+
+# لكل rule: positive + ≥2 negative + known benign test.` },
+      { title: 'أكمل task/service rules واختبر backends', code: `# Rule 2: scheduled-task registration من 4698/TaskContent أو process telemetry.
+# Rule 3: service installation من 7045/4697 وImagePath.
+# لا تكتشف كل task/service؛ استخدم behavior مثل user-writable paths/interpreters.
+# وثق required fields, null behavior, escaping, case sensitivity, FP owner/expiry.
+
+sigma version
+sigma check rules/
+sigma convert -t splunk rules/ > output/splunk.txt
+sigma convert -t lucene rules/ > output/lucene.txt
+# راجع field mappings والأداء يدويًا؛ نجاح التحويل لا يثبت جودة الكشف.` },
     ],
-    reportTemplate: `اكتب 10+ rules مختلفة تغطي:
-- PowerShell encoded
-- Lateral movement (PsExec, WMI, WinRM)
-- Persistence (Scheduled tasks, Services, Registry)
-- Credential access (LSASS, SAM)
-- Defense evasion (Log clearing, LOLBins)
-- Discovery (net commands, whoami)`,
-    deliverables: ['10+ Sigma YAML files', 'Testing documentation', 'MITRE mapping'],
+    reportTemplate: `# Detection Pack Notes
+
+Sigma/validator/backends and versions: ___
+Source schemas and required fields: ___
+
+| Rule | Behavior | Positive | Negative | Known FP | Backend checked |
+|---|---|---:|---:|---|---|
+| | | | | | |
+
+Per rule: logic, ATT&CK behavior mapping, blind spots, tuning owner/expiry, performance test: ___
+Status: draft/test/lab-validated only. Production validation requires representative data, peer review, rollout, and monitoring.`,
+    deliverables: ['3 Sigma YAML', '≥12 fixtures', 'Test results', '2 backend outputs', 'Changelog/engineering notes'],
+    acceptanceCriteria: ['Validator passes YAML/escaping', 'Positive+negative+benign tests', 'No unjustified high severity', 'Behavior-only ATT&CK mapping', 'Schema/backend assumptions', 'No production-ready claim'],
+  },
+  {
+    num: 6,
+    title: 'Threat Hunt — Periodicity with Benign Control',
+    goal: 'تحليل intervals على dataset حتمي وإثبات أن الانتظام مؤشر فرز لا verdict C2.',
+    estimated: '8–12 ساعة',
+    safety: 'لا تنشئ C2؛ كل البيانات محلية بعناوين TEST-NET. لا تنسب النتائج لمؤسسة حقيقية.',
+    requirements: ['Python 3 standard library', 'CSV', 'KQL basics', 'Statistical reasoning'],
+    steps: [
+      { title: 'ولّد ثلاثة patterns', code: `cat > generate_hunt_data.py <<'PY'
+import csv,datetime,random
+random.seed(42); base=datetime.datetime(2026,8,17,8,tzinfo=datetime.timezone.utc); rows=[]
+def add(host,proc,ip,offsets,context):
+ for sec in offsets: rows.append({'timestamp':(base+datetime.timedelta(seconds=sec)).isoformat(),'host':host,'process':proc,'remote_ip':ip,'port':443,'context':context})
+add('LAB-01','unknown.exe','192.0.2.44',[i*60+random.choice([-2,-1,0,1,2]) for i in range(30)],'unexplained')
+add('LAB-02','updater.exe','198.51.100.10',[i*900 for i in range(12)],'approved updater')
+t=0; browser=[]
+for _ in range(25): t+=random.randint(5,240); browser.append(t)
+add('LAB-03','browser.exe','203.0.113.20',browser,'interactive')
+rows.sort(key=lambda r:r['timestamp'])
+with open('network_events.csv','w',newline='') as f:
+ w=csv.DictWriter(f,fieldnames=rows[0]); w.writeheader(); w.writerows(rows)
+PY
+python3 generate_hunt_data.py; sha256sum network_events.csv` },
+      { title: 'احسب CV بلا is_beacon', code: `cat > analyze_periodicity.py <<'PY'
+import csv,collections,datetime,statistics
+g=collections.defaultdict(list)
+for r in csv.DictReader(open('network_events.csv')): g[(r['host'],r['process'],r['remote_ip'],r['port'])].append(datetime.datetime.fromisoformat(r['timestamp']))
+print('host,process,ip,port,count,mean_s,std_s,cv')
+for key,times in sorted(g.items()):
+ times.sort(); gaps=[(b-a).total_seconds() for a,b in zip(times,times[1:])]
+ mean=statistics.mean(gaps); std=statistics.pstdev(gaps)
+ print(*key,len(times),f'{mean:.2f}',f'{std:.2f}',f'{std/mean:.4f}',sep=',')
+PY
+python3 analyze_periodicity.py | tee results.csv
+# updater قد يكون CV=0 لكنه benign؛ unknown.exe مرشح enrichment فقط.` },
+      { title: 'اكتب hunt query وvalidation plan', code: `DeviceNetworkEvents
+| where Timestamp > ago(24h) and ActionType == "ConnectionSuccess"
+| project Timestamp, DeviceName, InitiatingProcessFileName,
+          InitiatingProcessSHA1, RemoteIP, RemotePort
+| sort by DeviceName asc, InitiatingProcessFileName asc, RemoteIP asc, Timestamp asc
+// احسب interval داخل كل series بعناية أو export للتحليل.
+// Enrich: signer/hash prevalence, parent tree, user/session, DNS/SNI,
+// destination owner, proxy allowlist, bytes, fleet prevalence, persistence.
+// Falsify with approved updater inventory and same pattern across fleet.` },
+    ],
+    reportTemplate: `# Periodic Connections Hunt
+
+Hypothesis/data contract/dataset SHA-256: ___
+
+| Series | Count | Mean | Std | CV | Context | Disposition |
+|---|---:|---:|---:|---:|---|---|
+| | | | | | | |
+
+Why updater control matters: ___
+Enrichment and falsification: ___
+Query/statistical limits: ___
+Outcome must be benign/escalated/unresolved with evidence—not automatic C2.`,
+    deliverables: ['Generator + seed', 'CSV/hash', 'Python analyzer', 'KQL artifact', 'Hunt report'],
+    acceptanceCriteria: ['Deterministic result', 'No numpy dependency', 'No is_beacon verdict from CV', 'Benign updater control', 'Enrichment/falsification', 'Limitations documented'],
+  },
+  {
+    num: 7,
+    title: 'Identity Incident — Sessions, MFA, OAuth, Mail',
+    goal: 'التحقيق في sign-ins مصطنعة وتجاوز فكرة أن password reset وحده استجابة كافية.',
+    estimated: '8–10 ساعات',
+    safety: 'JSONL مصطنع بعناوين TEST-NET. لا revoke/reset على tenant حقيقي دون playbook وتفويض.',
+    requirements: ['Python 3', 'KQL', 'Identity incident workflow'],
+    steps: [
+      { title: 'أنشئ evidence مصطنعًا', code: `cat > identity-events.jsonl <<'EOF'
+{"time":"2026-08-17T08:00:00Z","user":"student@example.invalid","ip":"192.0.2.10","country":"YE","app":"OfficeHome","result":"success","mfa":"satisfied","session":"S1","risk":"none"}
+{"time":"2026-08-17T08:07:00Z","user":"student@example.invalid","ip":"198.51.100.22","country":"SA","app":"OfficeHome","result":"success","mfa":"previously_satisfied","session":"S2","risk":"medium"}
+{"time":"2026-08-17T08:09:00Z","user":"student@example.invalid","ip":"198.51.100.22","country":"SA","app":"AzurePortal","result":"failure","mfa":"challenge_failed","session":"S2","risk":"high"}
+{"time":"2026-08-17T08:20:00Z","user":"student@example.invalid","action":"mailbox_rule_created","rule":"Archive invoices","session":"S2"}
+{"time":"2026-08-17T08:25:00Z","user":"student@example.invalid","action":"oauth_consent","app":"Synthetic Reader","session":"S2"}
+EOF
+sha256sum identity-events.jsonl` },
+      { title: 'ابنِ timeline حسب session', code: `python3 - <<'PY' | tee identity-timeline.txt
+import collections,json
+rows=sorted((json.loads(x) for x in open('identity-events.jsonl') if x.strip()),key=lambda r:r['time'])
+g=collections.defaultdict(list)
+for r in rows:g[r.get('session','NO_SESSION')].append(r)
+for session,events in g.items():
+ print('\\nSESSION',session)
+ for e in events:print(e['time'],e.get('ip','-'),e.get('result',e.get('action','-')),e.get('mfa','-'))
+PY` },
+      { title: 'تحقق قبل الاستجابة', code: `# KQL sources: SigninLogs + AuditLogs + non-interactive/service principal
+# + risk logs + mailbox audit حسب التراخيص والربط.
+# Geo anomaly ليست إثبات impossible travel: اختبر VPN/travel/geo error.
+# previously_satisfied ليست MFA prompt جديدًا.
+# Scope by session/correlation IDs, not time alone.
+# Authorized actions may include: block sign-in, revoke sessions/refresh tokens,
+# reset credentials, review MFA methods, OAuth grants, mailbox rules/delegation,
+# peer users/apps/IPs, preserve evidence, validate with user out-of-band.` },
+    ],
+    reportTemplate: `# Identity Incident
+
+Evidence source/timezone/hash and user/session IDs: ___
+
+| Time | Session | IP/location | App/action | Auth | Interpretation |
+|---|---|---|---|---|---|
+| | | | | | |
+
+Hypotheses: VPN/travel/geo error vs token misuse vs managed/shared source; evidence/falsification ___
+Scope: sign-ins, sessions, MFA methods, OAuth, mailbox, peers ___
+Authorized response: owner/time/action/evidence/rollback ___
+Gaps that could change decision: ___`,
+    deliverables: ['Synthetic JSONL/hash', 'Timeline', 'KQL plan', 'Decision log', 'Identity report'],
+    acceptanceCriteria: ['No geo-only verdict', 'previously_satisfied explained', 'Sessions+MFA+OAuth+mail scope', 'Correlation IDs', 'Planned vs completed actions separated'],
   },
   {
     num: 8,
-    title: 'Incident Response Tabletop Exercise',
-    goal: 'محاكاة حادثة Ransomware كاملة وتوثيق الاستجابة.',
-    requirements: ['Documentation', 'NIST framework'],
+    title: 'Ransomware Tabletop — NIST SP 800-61 Rev. 3',
+    goal: 'تدريب القرار والتواصل والتعافي دون malware أو certainty زائفة.',
+    estimated: '6–10 ساعات مع زميل إن أمكن',
+    safety: 'تمرين ورقي فقط. لا simulator ولا encryption script؛ العزل الواقعي يحتاج incident commander وتفويضًا.',
+    requirements: ['NIST Rev.3 concepts', 'Decision log', 'Business/asset context'],
     steps: [
-      { title: 'السيناريو', code: `# "تنبيه: Ransomware detected on FIN-SRV-01.
-# الإدارة تطلب تحديث كل 30 دقيقة."
-#
-# اكتب:
-# - الـ timeline الكامل للاستجابة
-# - القرارات المتخذة في كل مرحلة
-# - التواصل مع stakeholders
-# - التحديثات للإدارة كل 30 دقيقة
-# - التقرير النهائي` },
+      { title: 'حدد الأدوار والسلطة', code: `Roles: Incident Commander, SOC, IT Ops, Legal/Privacy,
+Communications, Business Owner, Backup Owner.
+Define escalation, authority matrix, evidence custodian,
+out-of-band channel, update cadence, and stop conditions.
+Govern/Identify/Protect support preparation; Detect/Respond/Recover handle incident activity.` },
+      { title: 'اعمل عبر أربعة injects', code: `T+00: EDR alert on FIN-WS-01; 12 files renamed. Sensor online.
+T+20: same user accessed FIN-SHARE-01 over SMB; backup status unknown.
+T+40: note claims data theft; proxy has a 25-minute visibility gap.
+T+70: owner asks to reconnect share; last restore test was 90 days ago.
+
+For each: facts | assumptions | missing data | options/risks |
+decision+owner | revisit trigger | next update.` },
+      { title: 'ضع recovery gate', code: `Require clean rebuild/restore source, credential/session decision,
+segmentation, validated restore test, monitoring, business acceptance,
+rollback plan, evidence retention, and elevated-watch period.
+Do not claim contained until scope/control effectiveness are verified.
+Do not claim exfiltration from a ransom note alone.` },
     ],
-    reportTemplate: `Timeline + Decisions + Communication + Final Report`,
-    deliverables: ['Timeline', 'Decisions log', 'Stakeholder updates', 'Final report'],
+    reportTemplate: `# Tabletop Record
+
+Roles/authority/channel/evidence custodian: ___
+
+| Time | Facts | Missing | Options/risks | Decision+owner | Revisit trigger |
+|---|---|---|---|---|---|
+| | | | | | |
+
+Scope/impact/data-theft evidence gaps: ___
+Executive updates: confirmed / unconfirmed / impact / actions / next decision ___
+Recovery criteria and test evidence: ___
+After-action owner/date/success metric: ___`,
+    deliverables: ['Authority matrix', '4-inject decision log', '3 updates', 'Recovery gate', 'After-action'],
+    acceptanceCriteria: ['Rev.3 current reference', 'Confirmed vs unconfirmed', 'No note-only exfil verdict', 'Business+backup owners', 'Action owner/trigger', 'No malware execution'],
   },
   {
     num: 9,
-    title: 'MITRE ATT&CK Coverage Assessment',
-    goal: 'تقييم تغطية الكشف لشركة افتراضية.',
-    requirements: ['MITRE Navigator', 'Excel/Sheets'],
+    title: 'ATT&CK Coverage — Evidence Matrix',
+    goal: 'تقييم telemetry→analytic→test→triage لعشرة سلوكيات، لا heatmap رأي.',
+    estimated: '8–12 ساعة',
+    safety: 'اختبارات حميدة فقط؛ لا credential dumping/evasion لتلوين خانة.',
+    requirements: ['ATT&CK', 'CSV/Sheets', 'Lab evidence', 'Detection tests'],
     steps: [
-      { title: 'الخطوات', code: `# 1. اختر 30 technique من MITRE
-# 2. لكل technique:
-#    - هل نستطيع كشفها؟
-#    - ما المصدر المطلوب؟
-#    - مستوى الثقة
-# 3. اعمل heatmap بالألوان
-# 4. اكتب توصيات لسد الثغرات` },
+      { title: 'أنشئ data contract', code: `cat > coverage.csv <<'EOF'
+behavior,attack_id,source,source_health,required_fields,analytic,positive_test,negative_test,last_test_utc,playbook,owner,gap,confidence
+PowerShell encoded argument,T1059.001,Windows 4688,unknown,Image;CommandLine,SIGMA-001,not_run,not_run,,PB-PS,student,command-line audit unknown,low
+Scheduled task registration,T1053.005,Security 4698,unknown,TaskName;TaskContent,SIGMA-002,not_run,not_run,,PB-TASK,student,audit policy unknown,low
+EOF
+# أكمل 10 behaviors تدربت عليها فعلاً؛ لا تضع covered=true بلا evidence.` },
+      { title: 'استخدم maturity قابلة للتدقيق', code: `0 no relevant telemetry
+1 configured; ingestion health unproven
+2 source and required fields observed with health evidence
+3 analytic has positive and negative lab tests
+4 triage playbook exercised and tuning measured on representative data
+
+A home lab normally cannot claim level 4 production representativeness.
+Prevention and visibility are not detection.` },
+      { title: 'رتب top gaps', code: `# لكل row اربط source-health, sanitized field sample, analytic,
+# positive/negative test, and triage notes. Record ATT&CK version/access date.
+# Rank top 3 by business relevance, exposure, feasibility, analyst capacity.
+# Give each owner, prerequisite, date, success evidence, and residual risk.` },
     ],
-    reportTemplate: `Coverage heatmap + Gap analysis + Recommendations`,
-    deliverables: ['Coverage heatmap', 'Gap analysis', 'Recommendations'],
+    reportTemplate: `# ATT&CK Evidence Assessment
+
+ATT&CK version/date, environment, and selection rationale: ___
+
+| Behavior/ID | Source health | Fields | Analytic | Tests | Playbook | Level/confidence |
+|---|---|---|---|---|---|---|
+| | | | | | | |
+
+Top 3 gaps: risk / dependency / owner-date / success evidence ___
+Limits: visibility vs detection vs prevention; lab vs production; unsupported mappings ___`,
+    deliverables: ['10-row matrix', 'Evidence links', 'Maturity rubric', 'Top-3 gap plan', 'Versioned report'],
+    acceptanceCriteria: ['No covered without source+fields+analytic+tests', 'Visibility/detection/prevention separate', 'Safe tests', 'Owner+evidence for gaps', 'ATT&CK version/date', 'Limits explicit'],
   },
   {
     num: 10,
-    title: 'Lab Setup Documentation',
-    goal: 'توثيق كامل للـ Home Lab.',
-    requirements: ['VirtualBox/VMware', 'Visio/draw.io'],
+    title: 'SOC Lab Operational Handoff + Public Release',
+    goal: 'Architecture وrunbooks وvalidation وrestore drill ونسخة Portfolio منزوعة الأسرار.',
+    estimated: '12–16 ساعة على أسبوعين',
+    safety: 'لا IPs عامة أو keys/tokens أو client data أو real PCAP. اختبر restore على Snapshot ولا تعتبر وجود backup إثباتًا.',
+    requirements: ['Hypervisor', 'Diagram tool', 'Wazuh lab', 'Git', 'Snapshots'],
     steps: [
-      { title: 'المحتوى المطلوب', code: `# - Network diagram (draw.io)
-# - VM specifications لكل جهاز
-# - Network configuration
-# - Snapshots strategy
-# - Tools installed على كل جهاز
-# - Use cases لكل VM` },
+      { title: 'وثق architecture والـtrust boundaries', code: `Diagram: manager/dashboard, Windows/Linux agents, analyst,
+Host-only data path, temporary NAT update path, management interfaces,
+log direction/ports, DNS/NTP dependencies, trust boundaries.
+Inventory: OS/version, vCPU/RAM/disk, IP role, data source, owner, snapshot.
+Never include credentials or enrollment secrets.` },
+      { title: 'أنشئ validation matrix فعلية', code: `cat > validation-matrix.csv <<'EOF'
+check,method,expected,actual,evidence,date_utc,result
+Time sync,NTP check,acceptable lab offset,,,,
+Agent health,agent_control -l,Active recent keepalive,,,,
+Windows 4688,benign marker,CommandLine observed,,,,
+Linux auth,5 controlled failures,scoped events,,,,
+Wazuh rule,positive+negative,100100 positive only,,,,
+Dashboard,case query,one per sequence,,,,
+Snapshot restore,restore drill,post-checks pass,,,,
+EOF
+# املأ actual من التشغيل؛ expected ليست result.` },
+      { title: 'نفذ restore drill وقس RTO', code: `# Record VM/snapshot IDs and critical hashes.
+# Create harmless post-snapshot marker.
+# Restore selected snapshot.
+# Verify marker absence, isolation, NTP, agent identity/status,
+# ingestion, rules, and one E2E positive/negative test.
+# Record observed RTO and data lost since snapshot.` },
+      { title: 'راجع public release', code: `# Tree: README, redacted diagram, start-stop/troubleshooting runbooks,
+# redacted validation, sanitized evidence hashes/samples, threat-model, changelog.
+git grep -nEi '(password|secret|token|api[_-]?key|private key)'
+git status --short
+# راجع Git history أيضًا؛ حذف secret من آخر commit لا يزيله من التاريخ.
+# README يجب أن يقول training lab، not production SOC.` },
     ],
-    reportTemplate: `Network diagram + VM specs + Config guide + Snapshots policy`,
-    deliverables: ['Network diagram', 'VM specifications', 'Configuration guide', 'Snapshots policy'],
+    reportTemplate: `# SOC Lab Operational Handoff
+
+Purpose/non-goals: training environment, explicit limits ___
+Architecture/data flows/trust boundaries/dependencies: ___
+Start-stop, health, storage, snapshots, rollback, troubleshooting: ___
+Validation: matrix, 3 ingestion latencies, positive/negative, restore RTO ___
+Threat model and residual risks: ___
+Public release redactions, secret/history review, reviewer/date, claims not made: ___`,
+    deliverables: ['Architecture diagram', 'VM inventory', 'Runbooks', 'Completed matrix', 'Measured restore drill', 'Redacted public release'],
+    acceptanceCriteria: ['Trust boundaries shown', 'Actual linked to evidence', 'Restore tested/measured', 'Positive+negative E2E', 'No secrets/client data/real PCAP', 'Training—not production—claim'],
   },
 ];
 
@@ -749,7 +653,7 @@ const ProjectsDetailedSection = () => {
       <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
 
       <Alert type="golden">
-        كل مشروع يحتوي على: الهدف + الخطوات + الأكواد + قالب التقرير + المخرجات المطلوبة. <strong>انسخ وطبّق!</strong>
+        المشروع لا يكتمل بالنسخ أو الصور. نفّذ داخل المختبر، استبدل القيم بالأدلة الفعلية، اختبر الفرضيات السلبية، وراجع معايير القبول قبل نشر نسخة منزوعة الأسرار.
       </Alert>
 
       <div className="space-y-4">
@@ -773,6 +677,17 @@ const ProjectsDetailedSection = () => {
             {/* Expanded content */}
             {openProject === project.num && (
               <div className="p-6 pt-0 space-y-6 border-t border-gray-700">
+                <div className="grid md:grid-cols-2 gap-3 pt-6">
+                  <div className="rounded-lg border border-blue-500/30 bg-blue-950/20 p-4">
+                    <h4 className="font-bold text-blue-300 mb-1">⏱️ الزمن التقريبي</h4>
+                    <p className="text-gray-300 text-sm">{project.estimated}</p>
+                  </div>
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-950/20 p-4">
+                    <h4 className="font-bold text-amber-300 mb-1">🛡️ حدود السلامة</h4>
+                    <p className="text-gray-300 text-sm leading-7">{project.safety}</p>
+                  </div>
+                </div>
+
                 {/* المتطلبات */}
                 <div>
                   <h4 className="text-cyan-400 font-bold mb-3">🛠️ المتطلبات:</h4>
@@ -817,6 +732,18 @@ const ProjectsDetailedSection = () => {
                     {project.deliverables.map((d, i) => (
                       <li key={i} className="flex items-center gap-2 text-gray-300 text-sm">
                         <span className="text-gray-500">☐</span> {d}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="rounded-xl border border-green-500/30 bg-green-950/20 p-5">
+                  <h4 className="text-green-300 font-bold mb-3">✅ معايير القبول قبل وضعه في Portfolio</h4>
+                  <ul className="space-y-2">
+                    {project.acceptanceCriteria.map((criterion, i) => (
+                      <li key={i} className="flex items-start gap-2 text-gray-300 text-sm leading-6">
+                        <span className="text-green-400 mt-0.5">□</span>
+                        <span>{criterion}</span>
                       </li>
                     ))}
                   </ul>

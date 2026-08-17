@@ -1,137 +1,64 @@
 import Alert from '../../components/Alert';
+import Table from '../../components/Table';
 import CodeBlock from '../../components/CodeBlock';
 
-const WindowsAuditingSection = () => {
-  return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3">
-        <span>⚙️</span>
-        تفعيل Auditing
-      </h1>
+const WindowsAuditingSection = () => (
+  <div className="space-y-10">
+    <h1 className="flex items-center gap-3 text-3xl font-bold text-cyan-400"><span>⚙️</span>Windows Auditing: visibility بعقد قياس وخصوصية</h1>
+    <Alert type="golden">Audit policy ليست «شغّل كل شيء». صممها من use cases وthreat model، قارنها ببنية مؤسستك وMicrosoft/security baseline المعتمد، اختبر canary، وقِس event generation/forwarding/retention/لفة الكلفة.</Alert>
 
-      <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">من السؤال إلى telemetry</h2>
+      <Table headers={['Use case', 'Candidate telemetry', 'اختبار acceptance']} rows={[
+        ['من أنشأ process؟', 'Audit Process Creation/4688 + command-line policy أو Sysmon/EDR', 'process حميد معروف يولد actor/image/parent/command حسب policy ويصل SIEM.'],
+        ['من حاول الدخول؟', 'Logon/Account Logon على endpoints/DCs + VPN/IdP', 'success/failure مصرح مع source/status والموضع الصحيح.'],
+        ['من غيّر account/group؟', 'Account Management على authoritative systems', 'fixture change يظهر subject/target/change ويمر parser.'],
+        ['هل أضيفت service/task؟', 'System Security Extension/System + Object Access task subcategory/channels', 'create/run/delete lifecycle وربطه process/file.'],
+        ['PowerShell ماذا نفذ؟', '4103/4104 + 4688/AMSI/EDR بحسب السياسة', 'script حميد متعدد الأجزاء reconstructed دون كشف أسرار.'],
+        ['Object access حساس؟', 'subcategory + SACL محددة', 'فقط object المطلوب ينتج event؛ الحجم ضمن budget.'],
+      ]} />
+    </section>
 
-      <Alert type="danger" title="بدون Auditing لن ترى شيء!">
-        الإعداد الافتراضي في Windows لا يسجل كل شيء. لازم تفعّل سياسات التدقيق Audit Policy.
-      </Alert>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">Baseline الحالية قبل التغيير</h2>
+      <CodeBlock language="powershell" code={`# Read-only inventory على مختبر/نطاق مصرح
+$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+auditpol /get /category:* /r | Out-File "audit-$stamp.csv" -Encoding utf8
+gpresult /h "gpresult-$stamp.html"
+wevtutil gl Security
+Get-WinEvent -ListLog Security,'Microsoft-Windows-PowerShell/Operational' -ErrorAction SilentlyContinue |
+  Select-Object LogName,IsEnabled,RecordCount,FileSize,MaximumSizeInBytes,LogMode,LastWriteTime`} />
+      <p className="text-sm text-gray-400">وثّق domain GPO/local policy precedence، Advanced Audit Policy setting، OS/build، owner، وتاريخ القياس. output نفسه قد يكون حساسًا.</p>
+    </section>
 
-      {/* طرق التفعيل */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-bold text-white">طرق التفعيل</h2>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">تغيير canary فقط — مثال لا prescription</h2>
+      <CodeBlock language="powershell" code={`# لا تنفذ إلا في VM snapshot مصرح وبعد تسجيل baseline/rollback
+$before = 'C:\\SOC-Lab\\audit-before.csv'
+auditpol /get /category:* /r > $before
 
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="bg-purple-900/20 rounded-xl p-6 border border-purple-500/30">
-            <h3 className="text-purple-400 font-bold mb-4">🏢 في بيئة Domain (GPO)</h3>
-            <code className="text-xs text-cyan-400 bg-gray-800 px-2 py-1 rounded block whitespace-pre-wrap">
-{`Computer Configuration
-→ Windows Settings
-→ Security Settings
-→ Advanced Audit Policy Configuration
-→ System Audit Policies`}
-            </code>
-          </div>
+auditpol /set /subcategory:"Process Creation" /success:enable /failure:enable
 
-          <div className="bg-blue-900/20 rounded-xl p-6 border border-blue-500/30">
-            <h3 className="text-blue-400 font-bold mb-4">💻 في جهاز واحد</h3>
-            <CodeBlock code="secpol.msc" />
-            <p className="text-gray-400 text-sm mt-2">Local Security Policy</p>
-          </div>
-        </div>
-      </section>
+# راجع effective policy واختبر process حميدًا ثم event 4688 وingestion
+AuditPol /get /subcategory:"Process Creation"
+Start-Process "$env:SystemRoot\\System32\\whoami.exe" -Wait
+Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4688; StartTime=(Get-Date).AddMinutes(-5)} -MaxEvents 10
 
-      {/* الإعدادات المهمة */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">📋 الإعدادات المهمة التي يجب تفعيلها</h2>
+# rollback يجب أن يعيد الحالة المسجلة/GPO، لا يفترض أنها Disabled.`} />
+      <Alert type="warning">إظهار command line في 4688 policy منفصلة وقد يسجل passwords/tokens/paths/PII. ضع data handling/RBAC/retention/redaction قبل التفعيل، ولا تضع secret في command line أصلًا.</Alert>
+    </section>
 
-        <div className="space-y-4">
-          {/* Account Logon */}
-          <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-            <h3 className="text-cyan-400 font-bold mb-4">🔐 Account Logon</h3>
-            <ul className="space-y-2 text-sm text-gray-300">
-              <li>✓ Audit Credential Validation: <span className="text-green-400">Success and Failure</span></li>
-              <li>✓ Audit Kerberos Authentication Service: <span className="text-green-400">Success and Failure</span></li>
-              <li>✓ Audit Kerberos Service Ticket Operations: <span className="text-green-400">Success and Failure</span></li>
-            </ul>
-          </div>
-
-          {/* Account Management */}
-          <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-            <h3 className="text-cyan-400 font-bold mb-4">👤 Account Management</h3>
-            <ul className="space-y-2 text-sm text-gray-300">
-              <li>✓ Audit User Account Management: <span className="text-green-400">Success and Failure</span></li>
-              <li>✓ Audit Security Group Management: <span className="text-green-400">Success and Failure</span></li>
-              <li>✓ Audit Computer Account Management: <span className="text-green-400">Success</span></li>
-            </ul>
-          </div>
-
-          {/* Detailed Tracking */}
-          <div className="bg-red-900/20 rounded-xl p-6 border border-red-500/30">
-            <h3 className="text-red-400 font-bold mb-4">⚙️ Detailed Tracking (مهم جداً)</h3>
-            <ul className="space-y-2 text-sm text-gray-300">
-              <li>✓ Audit Process Creation: <span className="text-green-400">Success</span> ⭐</li>
-              <li>✓ Audit Process Termination: <span className="text-yellow-400">Success (اختياري)</span></li>
-              <li>✓ Audit DPAPI Activity: <span className="text-green-400">Success</span></li>
-              <li>✓ Audit RPC Events: <span className="text-green-400">Success</span></li>
-            </ul>
-          </div>
-
-          {/* Logon/Logoff */}
-          <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-            <h3 className="text-cyan-400 font-bold mb-4">🔑 Logon/Logoff</h3>
-            <ul className="space-y-2 text-sm text-gray-300">
-              <li>✓ Audit Logon: <span className="text-green-400">Success and Failure</span></li>
-              <li>✓ Audit Logoff: <span className="text-green-400">Success</span></li>
-              <li>✓ Audit Account Lockout: <span className="text-green-400">Success</span></li>
-              <li>✓ Audit Special Logon: <span className="text-green-400">Success</span></li>
-            </ul>
-          </div>
-
-          {/* Policy Change */}
-          <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-            <h3 className="text-cyan-400 font-bold mb-4">📜 Policy Change</h3>
-            <ul className="space-y-2 text-sm text-gray-300">
-              <li>✓ Audit Audit Policy Change: <span className="text-green-400">Success and Failure</span></li>
-              <li>✓ Audit Authentication Policy Change: <span className="text-green-400">Success</span></li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      {/* تفعيل Command Line */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">⭐ تفعيل Command Line في Event 4688</h2>
-
-        <Alert type="golden" title="مهم جداً!">
-          هذه الخطوة لا تأتي افتراضياً ولكنها ضرورية.
-        </Alert>
-
-        <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-          <h3 className="text-cyan-400 font-bold mb-4">الخطوات</h3>
-          <CodeBlock
-            title="عبر Group Policy"
-            code={`gpedit.msc
-
-Computer Configuration
-→ Administrative Templates
-→ System
-→ Audit Process Creation
-→ "Include command line in process creation events" : Enabled`}
-          />
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-4 mt-4">
-          <div className="bg-red-900/20 rounded-xl p-4 border border-red-500/30">
-            <h4 className="text-red-400 font-bold mb-2">❌ بدون التفعيل</h4>
-            <code className="text-gray-400 text-sm">powershell.exe</code>
-          </div>
-          <div className="bg-green-900/20 rounded-xl p-4 border border-green-500/30">
-            <h4 className="text-green-400 font-bold mb-2">✅ مع التفعيل</h4>
-            <code className="text-green-400 text-sm">powershell.exe -ExecutionPolicy Bypass -EncodedCommand SQBFAFgA...</code>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-};
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">Acceptance وrollback</h2>
+      <ol className="space-y-2 text-sm leading-7 text-gray-300">
+        <li>1. Query use case يعيد الحقول المطلوبة من canary بزمن معلوم.</li>
+        <li>2. قِس EPS/GB-day/latency/drop/parser-null قبل وبعد ووقت retention الفعلي.</li>
+        <li>3. اختبر benign negatives لتقدير noise، وراجع privacy/access.</li>
+        <li>4. راقب 4719/GPO drift/agent heartbeat/channel fullness.</li>
+        <li>5. rollback إلى baseline الموثقة، ثم تحقق أن effective policy والtelemetry عادا كما كانا.</li>
+      </ol>
+    </section>
+  </div>
+);
 
 export default WindowsAuditingSection;

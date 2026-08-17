@@ -1,127 +1,62 @@
-
 import Alert from '../components/Alert';
+import Table from '../components/Table';
+import CodeBlock from '../components/CodeBlock';
 
-const PortsSection: React.FC = () => {
-  return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3">
-        <span>🔌</span>
-        الجزء 2: Ports & Protocols الشائعة
-      </h1>
-      <p className="text-gray-400">مرجع لازم تحفظه</p>
+const PortsSection: React.FC = () => (
+  <div className="space-y-8">
+    <header>
+      <h1 className="flex items-center gap-3 text-3xl font-bold text-cyan-400"><span>🔌</span>Ports وProtocols دون حفظ أعمى</h1>
+      <p className="mt-3 text-gray-300">المنفذ convention ونقطة فرز؛ التطبيق قد يعمل على منفذ آخر، وقد يستخدم المنفذ المتوقع لترافيك مختلف.</p>
+    </header>
 
-      <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
+    <Alert type="warning" title="Port ≠ protocol ≠ intent">
+      اتصال TCP/443 يتوافق مع HTTPS الشائع لكنه لا يثبت TLS أو السلامة، وTCP/4444 لا يثبت Metasploit. تحقق من protocol decoding وprocess وdestination وpolicy وoutcome.
+    </Alert>
 
-      <Alert type="info">
-        هذه قائمة بأهم الـ Ports التي ستواجهها يومياً كمحلل أمني. احفظها!
-      </Alert>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">1. مرجع التشغيل والتحقيق</h2>
+      <Table headers={['Port/transport الشائع', 'الخدمة', 'سؤال SOC']} rows={[
+        ['20/21 TCP', 'FTP data/control (active mode)', 'هل credentials/data cleartext؟ passive mode يستخدم منافذ أخرى.'],
+        ['22 TCP', 'SSH/SFTP', 'أي source/user/key/result؟ هل الأصل خادم إدارة معتمد؟'],
+        ['23 TCP', 'Telnet', 'هل هو جهاز legacy مصرح؟ ما بديل التشفير وخطة الإزالة؟'],
+        ['25/587/465 TCP', 'SMTP relay/submission/TLS', 'sender/auth/relay/message ID؛ التشفير يختلف حسب الإعداد.'],
+        ['53 UDP/TCP', 'DNS', 'query/answer/rcode/client؛ TCP طبيعي للردود الكبيرة وzone transfer المصرح.'],
+        ['67/68 UDP', 'DHCPv4 server/client', 'أي server عرض lease؟ هل هو معتمد وفي broadcast domain الصحيح؟'],
+        ['80/443 TCP', 'HTTP/HTTPS شائعان', 'Host/SNI/certificate/URL إن توفر وprocess/result/bytes.'],
+        ['443 UDP', 'QUIC / HTTP/3 شائع', 'هل sensor يفسره؟ هل policy تسمح به أم يحدث visibility gap؟'],
+        ['88 TCP/UDP', 'Kerberos', 'نوع الطلب/النتيجة والحساب والخدمة وDC؛ المنفذ لا يثبت ticket abuse.'],
+        ['123 UDP', 'NTP', 'server معتمد؟ offset/stratum/volume؛ الزمن يؤثر في correlation.'],
+        ['135 TCP + dynamic RPC', 'RPC endpoint mapper', 'أي interface ثم أي dynamic port/process؟'],
+        ['389/636 TCP', 'LDAP / LDAP over TLS', 'bind/query/identity/DC؛ 636 لا يضمن تحقق client الصحيح من الشهادة.'],
+        ['445 TCP', 'SMB', 'source/destination/share/user/session/file/service context.'],
+        ['1433/3306 TCP', 'SQL Server/MySQL defaults', 'هل DB مكشوفة؟ أي app identity/query outcome؟'],
+        ['3389 TCP/UDP', 'RDP', 'VPN/NLA/source/user/result/session/device؛ لا تستنتج success من connection.'],
+        ['5985/5986 TCP', 'WinRM HTTP/HTTPS', 'الهوية وsource host والعملية والتفويض والتغيير.'],
+      ]} />
+    </section>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-800">
-              <th className="px-4 py-3 text-right text-cyan-400 font-semibold border-b border-gray-700">Port</th>
-              <th className="px-4 py-3 text-right text-cyan-400 font-semibold border-b border-gray-700">Protocol</th>
-              <th className="px-4 py-3 text-right text-cyan-400 font-semibold border-b border-gray-700">الاستخدام</th>
-              <th className="px-4 py-3 text-right text-cyan-400 font-semibold border-b border-gray-700">علامة مشبوهة</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[
-              { port: '20/21', proto: 'FTP', use: 'نقل ملفات', sus: 'Cleartext credentials', color: 'yellow' },
-              { port: '22', proto: 'SSH', use: 'Remote admin', sus: 'Brute force, unusual sources', color: '' },
-              { port: '23', proto: 'Telnet', use: 'Remote (قديم)', sus: 'يجب ما يستخدم أبداً', color: 'red' },
-              { port: '25', proto: 'SMTP', use: 'إرسال إيميل', sus: 'Spam, exfiltration', color: '' },
-              { port: '53', proto: 'DNS', use: 'حل أسماء', sus: 'DNS tunneling, DGA', color: 'yellow' },
-              { port: '67/68', proto: 'DHCP', use: 'توزيع IP', sus: 'Rogue DHCP', color: '' },
-              { port: '80', proto: 'HTTP', use: 'ويب', sus: 'Cleartext data', color: 'yellow' },
-              { port: '88', proto: 'Kerberos', use: 'AD auth', sus: 'Golden/Silver ticket', color: 'red' },
-              { port: '110/143', proto: 'POP3/IMAP', use: 'استقبال إيميل', sus: 'Credentials', color: '' },
-              { port: '135', proto: 'RPC', use: 'Windows RPC', sus: 'Lateral movement', color: 'yellow' },
-              { port: '137-139', proto: 'NetBIOS', use: 'شبكات Windows', sus: 'قديم، مشبوه', color: 'red' },
-              { port: '389', proto: 'LDAP', use: 'AD queries', sus: 'LDAP enumeration', color: '' },
-              { port: '443', proto: 'HTTPS', use: 'ويب مشفر', sus: 'C2 over HTTPS', color: 'yellow' },
-              { port: '445', proto: 'SMB', use: 'مشاركة ملفات Windows', sus: 'EternalBlue, Lateral movement', color: 'red' },
-              { port: '464', proto: 'Kerberos password', use: 'تغيير كلمات السر', sus: '-', color: '' },
-              { port: '636', proto: 'LDAPS', use: 'LDAP مشفر', sus: '-', color: '' },
-              { port: '1433', proto: 'MSSQL', use: 'قواعد بيانات', sus: 'SQL injection follow-up', color: '' },
-              { port: '3306', proto: 'MySQL', use: 'قواعد بيانات', sus: '-', color: '' },
-              { port: '3389', proto: 'RDP', use: 'Remote Desktop', sus: 'Brute force, Lateral movement', color: 'red' },
-              { port: '5985/5986', proto: 'WinRM', use: 'PowerShell remoting', sus: 'Lateral movement', color: 'yellow' },
-              { port: '8080/8443', proto: 'HTTP/HTTPS Alt', use: 'Proxies', sus: 'C2', color: '' },
-            ].map((row, index) => (
-              <tr
-                key={index}
-                className={`border-b border-gray-800 hover:bg-gray-800/50 transition-colors ${
-                  row.color === 'red' ? 'bg-red-900/10' :
-                  row.color === 'yellow' ? 'bg-yellow-900/10' : ''
-                }`}
-              >
-                <td className="px-4 py-3 font-mono text-cyan-300 font-bold">{row.port}</td>
-                <td className="px-4 py-3 text-purple-400">{row.proto}</td>
-                <td className="px-4 py-3 text-gray-300">{row.use}</td>
-                <td className={`px-4 py-3 ${
-                  row.color === 'red' ? 'text-red-400' :
-                  row.color === 'yellow' ? 'text-yellow-400' : 'text-gray-400'
-                }`}>{row.sus}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">2. كيف تقرأ socket أو flow؟</h2>
+      <CodeBlock language="text" code={`Time UTC | sensor/direction | src IP:port -> dst IP:port | transport
+NAT/original IP if available | action | packets/bytes/duration
+Protocol evidence (DNS/TLS/HTTP/SMB...) | process/user/host
+Baseline/change/owner | first/last/prevalence | related event IDs`} />
+      <p className="text-sm leading-7 text-gray-300">Client source ports غالبًا ephemeral؛ لا تحفظ range عالميًا لأنه يختلف حسب OS/config. NAT قد يعيد كتابة العناوين والمنافذ، وload balancer أو proxy قد يجعل source المرئي وسيطًا لا الأصل.</p>
+    </section>
+
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">3. متى ترفع الأولوية؟</h2>
+      <div className="grid gap-3 md:grid-cols-2">
+        {[
+          ['Exposure', 'خدمة إدارية أو database متاحة من نطاق غير متوقع.'],
+          ['Policy mismatch', 'جهاز مستخدم يتصل بخدمة لا يحتاجها بحسب دوره.'],
+          ['Correlated outcome', 'remote logon ثم service/task/file أو privilege change.'],
+          ['Behavior', 'وجهات كثيرة، periodicity، bytes أو failures منحرفة عن baseline.'],
+        ].map(([title, text]) => <article key={title} className="rounded-xl border border-gray-700 bg-gray-800/50 p-5"><h3 className="font-bold text-cyan-300">{title}</h3><p className="mt-2 text-sm text-gray-300">{text}</p></article>)}
       </div>
-
-      <Alert type="golden" title="القاعدة الذهبية للمحلل">
-        أي <strong>Port غير مألوف</strong> يطلع من جهاز مستخدم عادي = <strong>يستحق التحقيق</strong>.
-      </Alert>
-
-      <div className="bg-red-900/20 rounded-xl p-6 border border-red-500/30">
-        <h3 className="text-lg font-bold text-red-400 mb-4">🚨 مثال تطبيقي:</h3>
-        <p className="text-gray-300">
-          لاب توب موظف يفتح اتصال على Port <code className="bg-gray-700 px-2 py-1 rounded text-red-400">4444</code> (Metasploit default)
-        </p>
-        <p className="text-2xl mt-4">→ 🚨 <strong className="text-red-400">يستحق تحقيق فوري!</strong></p>
-      </div>
-
-      <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700 mt-8">
-        <h3 className="text-lg font-bold text-cyan-400 mb-4">📊 Ports مقسمة حسب الخطورة</h3>
-        
-        <div className="grid md:grid-cols-3 gap-4">
-          <div className="bg-red-900/20 rounded-lg p-4 border border-red-500/30">
-            <h4 className="text-red-400 font-bold mb-3">🔴 عالية الخطورة</h4>
-            <ul className="space-y-1 text-sm text-gray-300">
-              <li>• 23 (Telnet)</li>
-              <li>• 445 (SMB)</li>
-              <li>• 3389 (RDP)</li>
-              <li>• 88 (Kerberos)</li>
-              <li>• 137-139 (NetBIOS)</li>
-            </ul>
-          </div>
-          
-          <div className="bg-yellow-900/20 rounded-lg p-4 border border-yellow-500/30">
-            <h4 className="text-yellow-400 font-bold mb-3">🟡 متوسطة الخطورة</h4>
-            <ul className="space-y-1 text-sm text-gray-300">
-              <li>• 21 (FTP)</li>
-              <li>• 53 (DNS)</li>
-              <li>• 80 (HTTP)</li>
-              <li>• 135 (RPC)</li>
-              <li>• 5985 (WinRM)</li>
-            </ul>
-          </div>
-          
-          <div className="bg-green-900/20 rounded-lg p-4 border border-green-500/30">
-            <h4 className="text-green-400 font-bold mb-3">🟢 عادية (لكن راقبها)</h4>
-            <ul className="space-y-1 text-sm text-gray-300">
-              <li>• 443 (HTTPS)</li>
-              <li>• 22 (SSH)</li>
-              <li>• 389 (LDAP)</li>
-              <li>• 636 (LDAPS)</li>
-              <li>• 25 (SMTP)</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+      <Alert type="golden">الأولوية تأتي من الأصل × التعرض × السلوك × النتيجة × الثقة، لا من لون ثابت لكل port.</Alert>
+    </section>
+  </div>
+);
 
 export default PortsSection;

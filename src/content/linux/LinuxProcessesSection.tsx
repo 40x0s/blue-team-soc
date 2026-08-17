@@ -2,176 +2,66 @@ import Alert from '../../components/Alert';
 import CodeBlock from '../../components/CodeBlock';
 import Table from '../../components/Table';
 
-const LinuxProcessesSection = () => {
-  return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3">
-        <span>⚙️</span>
-        العمليات Processes للمحلل
-      </h1>
+const LinuxProcessesSection = () => (
+  <div className="space-y-8">
+    <h1 className="text-3xl font-bold text-cyan-400">⚙️ Process Triage على Linux</h1>
+    <Alert type="warning" title="Process data متطايرة">
+      PID قد ينتهي ويُعاد استخدامه. سجل hostname والوقت/UTC وPID وstart time، ثم اجمع parent/executable/command/files/network قبل أي إيقاف مصرح.
+    </Alert>
 
-      <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">1. Snapshot وفهم الحقول</h2>
+      <CodeBlock language="bash" code={`date --iso-8601=seconds
+ps -eo user,pid,ppid,lstart,etime,%cpu,%mem,stat,comm,args --forest
+pstree -ap
 
-      {/* ps */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-bold text-white">أمر ps</h2>
+pid=1234
+ps -p "$pid" -o user,pid,ppid,lstart,etime,stat,comm,args`} />
+      <Table headers={['الحقل', 'يفيد في', 'لا تستنتج منه وحده']} rows={[
+        ['PID/PPID', 'ربط parent-child في اللحظة', 'Attribution؛ PID يعاد استخدامه'],
+        ['lstart/etime', 'وقت/عمر process', 'وقت تنزيل executable'],
+        ['USER', 'security context الظاهر', 'أن الإنسان نفسه نفّذها'],
+        ['CPU/MEM', 'انحراف resource', 'Malware؛ backup/compile قد يرتفع'],
+        ['args', 'Intent محتمل', 'Outcome؛ وقد يحوي secrets أو يكون modified/truncated'],
+      ]} />
+    </section>
 
-        <CodeBlock
-          title="عرض كل العمليات"
-          code={`ps aux
-ps -ef`}
-        />
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">2. Deep dive لـPID واحد</h2>
+      <CodeBlock language="bash" code={`pid=1234
+sudo stat -L -- "/proc/$pid/exe"
+sudo readlink -- "/proc/$pid/exe"
+sudo sha256sum -- "/proc/$pid/exe"
+sudo tr '\\0' ' ' < "/proc/$pid/cmdline"; echo
+sudo cat "/proc/$pid/status"
+sudo readlink -- "/proc/$pid/cwd"
+sudo lsof -nP -p "$pid" | head -n 100
+sudo lsof -nP -a -p "$pid" -i`} />
+      <Alert type="danger">لا تجمع <span dir="ltr">/proc/PID/environ</span> افتراضيًا؛ قد يحتوي credentials/tokens. إن احتجته فبتفويض وتخزين case مقيد وتنقيح التقرير.</Alert>
+      <div className="grid md:grid-cols-2 gap-4">
+        <article className="rounded-xl border border-gray-700 bg-gray-800/50 p-5"><h3 className="font-bold text-yellow-300">Executable في /tmp أو memfd</h3><p className="mt-2 text-sm leading-7 text-gray-300">يرفع الفرضية، لكن installer/test قد يكون شرعيًا. افحص owner/hash/package/parent/change/network.</p></article>
+        <article className="rounded-xl border border-gray-700 bg-gray-800/50 p-5"><h3 className="font-bold text-yellow-300">(deleted)</h3><p className="mt-2 text-sm leading-7 text-gray-300">يعني inode مفتوحًا بعد unlink؛ قد ينتج من update طبيعي. احسب hash عبر /proc إن بقي متاحًا واربط package/update timeline.</p></article>
+      </div>
+    </section>
 
-        <Table
-          headers={['العمود', 'المعنى', 'ملاحظة للمحلل']}
-          rows={[
-            ['USER', 'المستخدم', 'من يشغل العملية؟'],
-            ['PID', 'رقم العملية', 'للتتبع والإيقاف'],
-            ['%CPU', 'استخدام المعالج', 'عالي = مشبوه؟'],
-            ['%MEM', 'استخدام الذاكرة', 'عالي = مشبوه؟'],
-            ['COMMAND', 'الأمر', 'الأهم! ما هو البرنامج؟'],
-          ]}
-        />
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">3. من anomaly إلى decision</h2>
+      <ol className="space-y-2 leading-8 text-gray-300">
+        <li><strong className="text-cyan-300">Fact:</strong> path/hash/user/start/parent/socket دون وصف النية.</li>
+        <li><strong className="text-cyan-300">Provenance:</strong> package manager، signer إن وجد، owner، deployment/change، prevalence.</li>
+        <li><strong className="text-cyan-300">Behavior:</strong> files، sockets، children، persistence وauth session.</li>
+        <li><strong className="text-cyan-300">Alternatives:</strong> update، admin task، scanner، backup، container workload.</li>
+        <li><strong className="text-cyan-300">Decision:</strong> benign/suspicious/insufficient مع confidence ونطاق.</li>
+      </ol>
+      <Alert type="danger" title="لا تستخدم kill -9 كخطوة تحقيق">
+        SIGKILL لا يعطي process فرصة cleanup وقد يسبب تلفًا أو outage ويفقد volatile behavior. الاحتواء يحدده playbook/IR lead بعد تقييم الخدمة والدليل والبدائل؛ سجل الإشارة والفاعل والوقت وتحقق من النتيجة.
+      </Alert>
+    </section>
 
-        <CodeBlock
-          title="البحث عن عملية معينة"
-          code={`ps aux | grep nginx
-ps aux | grep -E "/tmp|/dev/shm"  # بحث عن مسارات مشبوهة`}
-        />
-
-        <CodeBlock
-          title="عرض شجرة العمليات (مهم جداً)"
-          code={`ps auxf
-pstree
-
-# يظهر العلاقة بين العمليات (الأم والابن)`}
-        />
-      </section>
-
-      {/* علامات مشبوهة */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">🚨 علامات مشبوهة في العمليات</h2>
-
-        <div className="grid md:grid-cols-2 gap-4">
-          <Alert type="danger">
-            <ul className="space-y-2">
-              <li>• عملية تعمل من <code className="bg-gray-700 px-1 rounded">/tmp</code></li>
-              <li>• عملية بأسماء عشوائية</li>
-              <li>• عملية تستهلك موارد عالية بشكل غير طبيعي</li>
-            </ul>
-          </Alert>
-          <Alert type="warning">
-            <ul className="space-y-2">
-              <li>• عملية بصلاحيات root غير معروفة</li>
-              <li>• عملية أم غير منطقية (bash يطلق nginx؟)</li>
-              <li>• عملية بدون ملف تنفيذي</li>
-            </ul>
-          </Alert>
-        </div>
-      </section>
-
-      {/* top & htop */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">أمر top و htop</h2>
-
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-            <h3 className="text-cyan-400 font-bold mb-4">top</h3>
-            <CodeBlock code={`top`} />
-            <p className="text-gray-400 text-sm mt-4">داخل top:</p>
-            <ul className="text-gray-300 text-sm space-y-1 mt-2">
-              <li>• <code className="bg-gray-700 px-1 rounded">P</code> - ترتيب حسب CPU</li>
-              <li>• <code className="bg-gray-700 px-1 rounded">M</code> - ترتيب حسب الذاكرة</li>
-              <li>• <code className="bg-gray-700 px-1 rounded">k</code> - إنهاء عملية</li>
-              <li>• <code className="bg-gray-700 px-1 rounded">q</code> - خروج</li>
-            </ul>
-          </div>
-
-          <div className="bg-green-900/20 rounded-xl p-6 border border-green-500/30">
-            <h3 className="text-green-400 font-bold mb-4">htop (أفضل وأجمل)</h3>
-            <CodeBlock code={`# تثبيت
-sudo apt install htop
-
-# تشغيل
-htop`} />
-            <p className="text-gray-400 text-sm mt-4">واجهة ملونة وتفاعلية!</p>
-          </div>
-        </div>
-      </section>
-
-      {/* فحص عملية بعمق */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">فحص عملية بعمق</h2>
-
-        <Alert type="info">
-          كل عملية لها مجلد في <code className="bg-gray-700 px-2 py-1 rounded">/proc/PID/</code>
-        </Alert>
-
-        <CodeBlock
-          title="معلومات تفصيلية عن عملية"
-          code={`# استبدل 1234 برقم PID الفعلي
-ls -l /proc/1234/
-
-# الأمر الكامل الذي شغل العملية
-cat /proc/1234/cmdline
-
-# حالة العملية
-cat /proc/1234/status
-
-# الملف التنفيذي الحقيقي
-ls -l /proc/1234/exe
-
-# مجلد العمل الحالي
-ls -l /proc/1234/cwd`}
-        />
-
-        <CodeBlock
-          title="الملفات المفتوحة من عملية"
-          code={`lsof -p 1234`}
-        />
-
-        <CodeBlock
-          title="الاتصالات الشبكية من عملية"
-          code={`lsof -i -p 1234
-netstat -tnp | grep 1234
-ss -tnp | grep 1234`}
-        />
-      </section>
-
-      {/* مثال عملي */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">📋 مثال عملي: تحقيق في عملية مشبوهة</h2>
-
-        <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-          <p className="text-gray-300 mb-4">لنفترض وجدت عملية مشبوهة PID=5678:</p>
-
-          <CodeBlock
-            code={`# 1. ما هو الأمر الذي شغلها؟
-cat /proc/5678/cmdline; echo
-
-# 2. من أين تعمل؟
-ls -l /proc/5678/exe
-ls -l /proc/5678/cwd
-
-# 3. من المستخدم؟
-ps -p 5678 -o user=
-
-# 4. ما هي الملفات المفتوحة؟
-lsof -p 5678
-
-# 5. هل لها اتصالات شبكية؟
-ss -tnp | grep 5678
-
-# 6. من العملية الأم؟
-ps -o ppid= -p 5678
-
-# 7. إيقاف العملية (بعد التوثيق!)
-sudo kill -9 5678`}
-          />
-        </div>
-      </section>
-    </div>
-  );
-};
+    <Alert type="golden" title="اختبار الإتقان">
+      اختر process شرعية في VM، اجمع الأدلة أعلاه، ثم اكتب لماذا path أو port أو CPU لا يكفي وحده. لا توقفها. يجب أن يستطيع زميل إعادة جمع نفس الحقول.
+    </Alert>
+  </div>
+);
 
 export default LinuxProcessesSection;

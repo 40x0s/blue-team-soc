@@ -15,6 +15,7 @@ const Table: React.FC<TableProps> = ({ headers, rows, highlight = [] }) => {
             {headers.map((header, index) => (
               <th
                 key={index}
+                scope="col"
                 className="px-4 py-3 text-right text-cyan-400 font-semibold border-b border-gray-700"
               >
                 {header}
